@@ -18,6 +18,6 @@ set_target_properties(airfoil_grad2 PROPERTIES
 add_executable(airfoil_grad3 airfoil_3.cu)
 
 #Compile specifically for H100's on Kestrel
-set_target_properties(airfoil_grad2 PROPERTIES
+set_target_properties(airfoil_grad3 PROPERTIES
     CUDA_ARCHITECTURES "90"
 )
