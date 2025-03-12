@@ -44,6 +44,19 @@ This can be found at [src/try_adi.cu](src/try_adi.cu).
 Moving to curvilinear coordinates
 ---------------------------------
 
+The logical next step is to make sure that we can compute simple gradients on curvilinear meshes. After thorough consideration of using equations transformed to a cartesian reference coordinate system using Jacobian transformations, I decided to forgo this approach and stick to traditional methods using Green-Gauss theorem as 
+$$
+ \int_V \frac{\partial \phi}{\partial x} \; \textrm{d}V = \int_S \phi \; ( \hat{i} \cdot \hat{n} ) \; \textrm{d}S.
+$$
+In discrete terms in two dimensions the partial derivative at the cell center will become,
+$$
+\frac{\partial \phi}{\partial x} = \frac{1}{A} \sum_{\textrm{faces}} \phi_f  ( \hat{i} \cdot \vec{S} ),
+$$
+where $\vec{S}$ is the area of the faces and $A$ is the area of the cell. In this first implementation, the value of the field at the cell $\phi_f$ is simply written as the average of the values at the neighboring cell centers as
+$$
+\phi_f = \frac{1}{2} ( \phi_C + \phi_{\textrm{nei}}).
+$$
+I read the coordinates into `h_pts` and transfer to device. A field with a known gradient is initialized on device as $\phi = x^2 + y^3$. The reference gradient field is evaluated on device at the cell centers as well. The  output is written into the legacy vtk format. This implementation can be found at [src/airfoil/airfoil.cu](src/airfoil/airfoil.cu).
 
 
 

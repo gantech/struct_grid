@@ -7,4 +7,4 @@ set_target_properties(adi_cuda PROPERTIES
     CUDA_ARCHITECTURES "90"
 )
 
-
+add_subdirectory(airfoil)
