@@ -24,7 +24,7 @@ The Newton-Raphson iteration for each compuation of the residual $R$ with a give
 ```math
 \frac{\partial R}{\partial T} \Delta T = -R.
 ```
-The Jacobian $ \frac{\partial R}{\partial T} is stored in a 2-D array $J$ of shape $(nx,ny,5)$ where the last index stores the derivatives of the residual $R_{ij}$ with respect to the state variable $T$ at $i,j$, $i-1,j$, $i+1,j$, $i,j-1$, $i,j+1$ in that order. Looking back, I should've probly ordered the $J$ array as $(5,nx,ny)$.
+The Jacobian $ \frac{\partial R}{\partial T}$ is stored in a 2-D array $J$ of shape $(nx,ny,5)$ where the last index stores the derivatives of the residual $R_{ij}$ with respect to the state variable $T$ at $i,j$, $i-1,j$, $i+1,j$, $i,j-1$, $i,j+1$ in that order. Looking back, I should've probly ordered the $J$ array as $(5,nx,ny)$.
 
 This file can be found at [python/try_adi.py](python/try_adi.py). 
 
@@ -36,7 +36,7 @@ TODO
 ADI in CUDA
 -----------
 
-Now, I implement the same ADI algorithm in CUDA C++. Since multi-dimensional arrays are not natively available in CUDA, I use a column major order to store arrays $idx[i,j] = j * nx + i$. For the Jacobian vector $j_idx[i,j,k] = (j * nx + i) * 5 + k$. Since there are no for loops, the block sizes are defined using `#define TILE_SIZE 16`. The same block sizes are used for both $i$ and $j$ directions.
+Now, I implement the same ADI algorithm in CUDA C++. Since multi-dimensional arrays are not natively available in CUDA, I use a column major order to store arrays `idx[i,j] = j * nx + i`. For the Jacobian vector `j_idx[i,j,k] = (j * nx + i) * 5 + k`. Since there are no for loops, the block sizes are defined using `#define TILE_SIZE 16`. The same block sizes are used for both $i$ and $j$ directions.
 
 This can be found at [src/try_adi.cu](src/try_adi.cu). 
 
@@ -59,5 +59,7 @@ where $\vec{S}$ is the area of the faces and $A$ is the area of the cell. In thi
 I read the coordinates into `h_pts` and transfer to device. A field with a known gradient is initialized on device as $\phi = x^2 + y^3$. The reference gradient field is evaluated on device at the cell centers as well. The  output is written into the legacy vtk format. This implementation can be found at [src/airfoil/airfoil.cu](src/airfoil/airfoil.cu).
 
 
+Improved gradient computation on airfoil meshes using linear interpolation
+--------------------------------------------------------------------------
 
-
+In this step, we improve the interpolation of a field to the faces using linear interpolation. This can be found at [src/airfoil/airfoil_2.cu](src/airfoil/airfoil_2.cu).
