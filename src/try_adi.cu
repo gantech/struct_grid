@@ -4,9 +4,9 @@
 #include <cuda_runtime.h>
 
 #define TILE_SIZE 32
-#define TILE_SIZE_ADI 2
-#define NNX 128
-#define NNY 384
+#define TILE_SIZE_ADI 64
+#define NNX 1280
+#define NNY 3840
 
 // Kernel function for initialization - No tiling or shared memory
 __global__ void initialize(double *T, int nx, int ny, double dx, double dy) {
@@ -102,7 +102,7 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
         //     printf("Row, Col is %d, %d - x,y = %f, %f, Residuals - %f, %f, J - (j-1) %f, (j+1) %f, (i-1) %f, (i+1) %f, (ij) %f, T - (j-1) %f, (j+1) %f, (i-1) %f, (i+1) %f, (ij) %f \n", row, col, x, y, 2.0 - 2.0 * y / 9.0, tmp / (dx * dy * kc), jijm1, jijp1, jim1j, jip1j, jij, tijm1, tijp1, tim1j, tip1j, T[idx_r]);
         // }
 
-        R[idx_r] = tmp;
+        R[idx_r] = -tmp;
 
         // Write to the Jacobian
         J[idx_j] = jij * kc; //i,j
@@ -163,7 +163,7 @@ __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, doub
         }
 
         // Write to residual
-        R[idx_r] = kc * ( jijm1 * tijm1 + jijp1 * tijp1 + jim1j * tim1j + jip1j * tip1j + jij * T[idx_r] + (2.0 + 2.0 * y / 9.0) * dx * dy) + radd;
+        R[idx_r] = -kc * ( jijm1 * tijm1 + jijp1 * tijp1 + jim1j * tim1j + jip1j * tip1j + jij * T[idx_r] + (2.0 + 2.0 * y / 9.0) * dx * dy) + radd;
     }
 }
 
@@ -208,62 +208,37 @@ __global__ void jacobi_iter(double *T, double *deltaT, double *J, double *R, int
             tijp1 = deltaT[idx_r + nx];
         }
 
-        deltaT[idx_r] = (-R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
+        deltaT[idx_r] = (R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
     }
 }
 
 // Kernel function for Thomas solves in the X direction - part of ADI - No tiling or shared memory
 // Directly update the solution
-__global__ void adi_x(double *T, double *J, double *R, int nx, int ny) {
+__global__ void adi_x(double *T, double * deltaT, double *J, double *R, int nx, int ny) {
 
     //extern __shared__ double sharedMemory[];
 
-    __shared__ double sharedMemory[5 * TILE_SIZE_ADI * NNX];
     int col = blockIdx.x * blockDim.x + threadIdx.x;
     // printf("BlockIdx - %d, ThreadIdx - %d, Col is %d\n", blockIdx.x, threadIdx.x, col);
-
-    double * a = sharedMemory + threadIdx.x * 5 * nx;
-    double * b = a + nx;
-    double * c = b + nx;
-    double * d = c + nx;
-    double * x = d + nx;
-
-    if (col < ny) {
-
-        for (int i=0; i < nx; i++) {
-
-            int idx_r = (col * nx) + i;
-            int idx_j = idx_r * 5;
-    
-            a[i] = J[idx_j + 1];
-            b[i] = J[idx_j];
-            c[i] = J[idx_j + 2];
-            d[i] = -R[idx_r];
-
-            // if (col == 0) {
-            //     printf("Row, Col, idx_r is %d, %d, %d - a %e, b %e, c %e, d %e\n", i, col, idx_r, a[i], b[i], c[i], d[i]);
-            // }
-        }
-    }
-
-    __syncthreads();
 
     if (col < ny) {
 
         // Forward substitution
         for (int i=1; i < nx; i++) {
-            double w = a[i] / b[i-1];
-            b[i] = b[i] - w * c[i-1];
-            d[i] = d[i] - w * d[i-1];
+            int idx_r = (col * nx) + i;
+            int idx_j = idx_r * 5;
+            double w = J[idx_j+1] / J[idx_j-5];
+            J[idx_j] = J[idx_j] - w * J[idx_j-5+2];
+            R[idx_r] = R[idx_r] - w * R[idx_r-1];
         }
 
-
-
-        // Backward substitution
-        x[nx-1] = d[nx-1] / b[nx-1];
+        // Backward substitution       
+        deltaT[col * nx + nx-1] = R[col * nx + nx-1] / J[(col * nx + nx-1) * 5];
         
         for (int i = nx-2; i > -1; i--) {
-            x[i] = (d[i] - c[i] * x[i+1]) / b[i];
+            int idx_r = (col * nx) + i;
+            int idx_j = idx_r * 5;
+            deltaT[idx_r] = (R[idx_r] - J[idx_j+2] * deltaT[idx_r+1]) / J[idx_j];
         }
 
         // if (col == 0) {
@@ -275,7 +250,7 @@ __global__ void adi_x(double *T, double *J, double *R, int nx, int ny) {
         // Update solution back T
         for (int i=0; i < nx; i++) {
             int idx_r = (col * nx) + i;
-            T[idx_r] = T[idx_r] + x[i];
+            T[idx_r] = T[idx_r] + deltaT[idx_r];
         }
 
     }
@@ -284,56 +259,37 @@ __global__ void adi_x(double *T, double *J, double *R, int nx, int ny) {
 
 // Kernel function for Thomas solves in the Y direction - part of ADI - No tiling or shared memory
 // Directly update the solution
-__global__ void adi_y(double *T, double *J, double *R, int nx, int ny) {
+__global__ void adi_y(double *T, double * deltaT, double *J, double *R, int nx, int ny) {
 
     //extern __shared__ double sharedMemory[];
 
-    __shared__ double sharedMemory[5 * TILE_SIZE_ADI * NNY];
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     // printf("BlockIdx - %d, ThreadIdx - %d, Row is %d\n", blockIdx.x, threadIdx.x, row);
-
-    double * a = sharedMemory + threadIdx.x * 5 * ny;
-    double * b = a + ny;
-    double * c = b + ny;
-    double * d = c + ny;
-    double * x = d + ny;
-
-    if (row < nx) {
-
-        for (int j=0; j < ny; j++) {
-
-            int idx_r = (j * nx) + row;
-            int idx_j = idx_r * 5;
-    
-            a[j] = J[idx_j + 3];
-            b[j] = J[idx_j];
-            c[j] = J[idx_j + 4];
-            d[j] = -R[idx_r];
-        }
-    }
-
-    __syncthreads();
 
     if (row < nx) {
 
         // Forward substitution
         for (int j=1; j < ny; j++) {
-            double w = a[j] / b[j-1];
-            b[j] = b[j] - w * c[j-1];
-            d[j] = d[j] - w * d[j-1];
+            int idx_r = (j * nx) + row;
+            int idx_j = idx_r * 5;
+            double w = J[idx_j+3] / J[idx_j-5];
+            J[idx_j] = J[idx_j] - w * J[idx_j-5+4];
+            R[idx_r] = R[idx_r] - w * R[idx_r-nx];
         }
 
         // Backward substitution
-        x[ny-1] = d[ny-1] / b[ny-1];
+        deltaT[(ny-1)*nx+row] = R[(ny-1)*nx + row] / J[((ny-1)*nx+row)*5];
         
         for (int j = ny-2; j > -1; j--) {
-            x[j] = (d[j] - c[j] * x[j+1]) / b[j];
+            int idx_r = (j * nx) + row;
+            int idx_j = idx_r * 5;
+            deltaT[idx_r] = (R[idx_r] - J[idx_j+4] * deltaT[idx_r+nx]) / J[idx_j];
         }
 
         // Update solution back T
         for (int j=0; j < ny; j++) {
             int idx_r = (j * nx) + row;
-            T[idx_r] = T[idx_r] + x[j];
+            T[idx_r] = T[idx_r] + deltaT[idx_r];
         }
 
     }
@@ -344,8 +300,8 @@ __global__ void adi_y(double *T, double *J, double *R, int nx, int ny) {
 int main() {
 
     // Problem size
-    int nx = 128;
-    int ny = 384;
+    int nx = NNX;
+    int ny = NNY;
     double dx = 1.0 / double(nx);
     double dy = 3.0 / double(ny);
     std::cout << "dx = " << dx << ", dy = " << dy << std::endl;
@@ -390,13 +346,13 @@ int main() {
     dim3 block_size_adi(TILE_SIZE_ADI, 1,1);
     dim3 grid_size_adiy(ceil(nx / (double)TILE_SIZE_ADI), 1, 1);
 
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 100; i++) {
         //adi_x<<<grid_size_adix, block_size_adi, (5*nx*TILE_SIZE_ADI*sizeof(double))>>>(T, J, R, nx, ny);
-        adi_x<<<grid_size_adix, block_size_adi>>>(T, J, R, nx, ny);
+        adi_x<<<grid_size_adix, block_size_adi>>>(T, deltaT, J, R, nx, ny);
         compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
 
         //adi_y<<<grid_size_adiy, block_size_adi, (5*ny*TILE_SIZE_ADI*sizeof(double))>>>(T, J, R, nx, ny);
-        adi_y<<<grid_size_adiy, block_size_adi>>>(T, J, R, nx, ny);
+        adi_y<<<grid_size_adiy, block_size_adi>>>(T, deltaT, J, R, nx, ny);
         compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
     }
 
