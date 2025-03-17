@@ -232,7 +232,7 @@ __global__ void compute_r_j(double * phi, double * grad_phi, double *jac, double
         double Ef = - (area[idx_a+2]*area[idx_a+2]+area[idx_a+3]*area[idx_a+3])/(dCFx * area[idx_a+2] + dCFy * area[idx_a+3]);
         double gphifx = lin_interp(grad_phi[idx_gp], grad_phi[idx_gp_im1], area[idx_a+6]);
         double gphify = lin_interp(grad_phi[idx_gp+1], grad_phi[idx_gp_im1+1], area[idx_a+6]);
-        loc_res += (phi[idx_phi_im1]-phi[idx_phi])*Ef/dCF + gphix * (-area[idx_a+2] - Ef * dCFx) + gphiy * (-area[idx_a+3] - Ef * dCFy);
+        loc_res += (phi[idx_phi_im1]-phi[idx_phi])*Ef/dCF + gphifx * (-area[idx_a+2] - Ef * dCFx) + gphify * (-area[idx_a+3] - Ef * dCFy);
         jac_c = -Ef/dCF;
         jac[idx_jac+1] = Ef/dCF;
 
@@ -246,7 +246,7 @@ __global__ void compute_r_j(double * phi, double * grad_phi, double *jac, double
         Ef = (area[idx_a+7+2]*area[idx_a+7+2]+area[idx_a+7+3]*area[idx_a+7+3])/(dCFx * area[idx_a+7+2] + dCFy * area[idx_a+7+3]);
         gphifx = lin_interp(grad_phi[idx_gp_ip1], grad_phi[idx_gp], area[idx_a+7+6]);
         gphify = lin_interp(grad_phi[idx_gp_ip1+1], grad_phi[idx_gp+1], area[idx_a+7+6]);
-        loc_res += (phi[idx_phi_ip1]-phi[idx_phi])*Ef/dCF + gphix * (area[idx_a+7+2] - Ef * dCFx) + gphiy * (area[idx_a+7+3] - Ef * dCFy);
+        loc_res += (phi[idx_phi_ip1]-phi[idx_phi])*Ef/dCF + gphifx * (area[idx_a+7+2] - Ef * dCFx) + gphify * (area[idx_a+7+3] - Ef * dCFy);
         jac_c -= Ef/dCF;
         jac[idx_jac+2] = Ef/dCF;
 
@@ -261,7 +261,7 @@ __global__ void compute_r_j(double * phi, double * grad_phi, double *jac, double
             Ef = - (area[idx_a] * area[idx_a] + area[idx_a+1] * area[idx_a+1])/(dCFx * area[idx_a] + dCFy * area[idx_a+1]);
             gphifx = lin_interp(grad_phi[idx_gp], grad_phi[idx_gp-nx*NDIM], area[idx_a+5]);
             gphify = lin_interp(grad_phi[idx_gp+1], grad_phi[idx_gp-nx*NDIM+1], area[idx_a+5]);
-            loc_res += (phi[idx_phi-nx]-phi[idx_phi])*Ef/dCF + gphix * (-area[idx_a] - Ef * dCFx) + gphiy * (-area[idx_a+1] - Ef * dCFy);
+            loc_res += (phi[idx_phi-nx]-phi[idx_phi])*Ef/dCF + gphifx * (-area[idx_a] - Ef * dCFx) + gphify * (-area[idx_a+1] - Ef * dCFy);
             jac_c -= Ef/dCF;
             jac[idx_jac+3] = Ef/dCF;
         } else {
@@ -284,7 +284,7 @@ __global__ void compute_r_j(double * phi, double * grad_phi, double *jac, double
             Ef = (area[idx_a+nxp*7]*area[idx_a+nxp*7]+area[idx_a+nxp*7+1]*area[idx_a+nxp*7+1])/(dCFx * area[idx_a+nxp*7] + dCFy * area[idx_a+nxp*7+1]);
             gphifx = lin_interp(grad_phi[idx_gp+nx*NDIM], grad_phi[idx_gp], area[idx_a+nxp*7+5]);
             gphify = lin_interp(grad_phi[idx_gp+nx*NDIM+1], grad_phi[idx_gp+1], area[idx_a+nxp*7+5]);
-            loc_res += (phi[idx_phi+nx]-phi[idx_phi])*Ef/dCF + gphix * (area[idx_a+nxp*7] - Ef * dCFx) + gphiy * (area[idx_a+nxp*7+1] - Ef * dCFy);
+            loc_res += (phi[idx_phi+nx]-phi[idx_phi])*Ef/dCF + gphifx * (area[idx_a+nxp*7] - Ef * dCFx) + gphify * (area[idx_a+nxp*7+1] - Ef * dCFy);
             jac_c -= Ef/dCF;
             jac[idx_jac+4] = Ef/dCF;
         } else if (j == (ny - 1)) {
