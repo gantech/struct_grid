@@ -176,8 +176,8 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
         grad_phi[idx_gp] = tmp;
         grad_phi[idx_gp + 1] = tmp1;
 
-        if ( (tmp * grad_phi_ref[idx_gp]) < 0.0 )
-            printf("i %d, j %d, grad_phi_x = %e, grad_phi_ref_x %e, phi_x_ew = %e, phi_x_ns = %e, IF: (S) %e, (W) %e, (N) %e, (E) %e, Total %e, Phi (I-1) %e, (I), %e, (I+1) %e, (J-1) %e, (J+1) %e \n", i, j, tmp, grad_phi_ref[idx_gp], (phi_xix_e - phi_xix_w)/area[idx_a+4], (phi_etax_n - phi_etax_s)/area[idx_a+4], area[idx_a+5], area[idx_a+6], area[idx_a+nxp*7+5], area[idx_a+7+5], area[idx_a+4], phiim1j, phiij, phiip1j, phiijm1, phiijp1);
+        // if ( (tmp * grad_phi_ref[idx_gp]) < 0.0 )
+        //    printf("i %d, j %d, grad_phi_x = %e, grad_phi_ref_x %e, phi_x_ew = %e, phi_x_ns = %e, IF: (S) %e, (W) %e, (N) %e, (E) %e, Total %e, Phi (I-1) %e, (I), %e, (I+1) %e, (J-1) %e, (J+1) %e \n", i, j, tmp, grad_phi_ref[idx_gp], (phi_xix_e - phi_xix_w)/area[idx_a+4], (phi_etax_n - phi_etax_s)/area[idx_a+4], area[idx_a+5], area[idx_a+6], area[idx_a+nxp*7+5], area[idx_a+7+5], area[idx_a+4], phiim1j, phiij, phiip1j, phiijm1, phiijp1);
         // if (i == 0)
         //     printf("i %d, j %d, grad_phi_x = %e, phi_xiy_e = %e, phi_xiy_w = %e, phi_etay_n = %e, phi_etay_s = %e, Areas: (S) %e, %e, (N) %e, %e, (E) %e, %e, (W) %e, %e, Phi (I-1) %e, (I), %e, (I+1) %e, (J-1) %e, (J+1) %e\n", i, j, tmp1, phi_xiy_e, phi_xiy_w, phi_etay_n, phi_etay_s, area[idx_a], area[idx_a+1], area[idx_a+nxp*7], area[idx_a+nxp*7+1], area[idx_a+7+2], area[idx_a+7+3], area[idx_a+2], area[idx_a+3], phiim1j, phiij, phiip1j, phiijm1, phiijp1);
     }
