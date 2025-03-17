@@ -400,13 +400,9 @@ int main() {
     cudaDeviceSynchronize();
 
     
-
-
-
-
-
-
-
+    double * h_res = new double[ntot];
+    cudaMemcpy(h_res, res, ntot * sizeof(double), cudaMemcpyDeviceToHost);
+    
 
     // Write h_grad_phi to a file
     double zero = 0.0;
@@ -441,7 +437,12 @@ int main() {
         grad_file << "LOOKUP_TABLE default" << std::endl;
         for (int i = 0; i < ntot; ++i) 
             grad_file << h_grad_phi_ref[i * NDIM + 1] << std::endl;
+        grad_file << "SCALARS residual double 1" << std::endl;
+        grad_file << "LOOKUP_TABLE default" << std::endl;
+        for (int i = 0; i < ntot; ++i)
+            grad_file << h_res[i] << std::endl;
         grad_file.close();
+
         std::cout << "Gradient of phi written to grad_phi.vtk" << std::endl;
     } else {
         std::cerr << "Error: could not open grad_phi.vtk for writing" << std::endl;
