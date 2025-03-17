@@ -8,6 +8,12 @@
 #define TILE_SIZE_ADI 2
 #define NDIM 2
 
+__global__ void compute_area(double * pts, double * area, int nxp, int nyp);
+__global__ void compute_if(double * pts, double * cell_center, double * area, int nx, int ny, int nxp, int nyp);
+__global__ void compute_cellcenter(double * pts, double * cell_center, int nx, int ny, int nxp, int nyp) ;
+
+
+
 // Kernel to initialize a field phi as x^2 + y^3
 __global__ void initialize_phi(double * pts, double * phi, double * phi_bc_bot, double * phi_bc_top, int nx, int ny, int nxp, int nyp) {
 
@@ -220,12 +226,12 @@ __global__ void compute_r_j(double * phi, double * grad_phi, double *jac, double
         double rFx = cell_center[idx_gp_im1];
         double rFy = cell_center[idx_gp_im1 + 1];
         double dCF = mag(rFx-rCx, rFy-rCy);
-        double dCFx = (rFx - rCx/dCFx);
-        double dCFy = (rFy - rCy/dCFx);
+        double dCFx = (rFx - rCx)/dCF;
+        double dCFy = (rFy - rCy)/dCF;
 
         double Ef = - (area[idx_a+2]*area[idx_a+2]+area[idx_a+3]*area[idx_a+3])/(dCFx * area[idx_a+2] + dCFy * area[idx_a+3]);
-        gphifx = lin_interp(grad_phi[idx_gp], grad_phi[idx_gp_im1], area[idx_a+6]);
-        gphify = lin_interp(grad_phi[idx_gp+1], grad_phi[idx_gp_im1+1], area[idx_a+6]);
+        double gphifx = lin_interp(grad_phi[idx_gp], grad_phi[idx_gp_im1], area[idx_a+6]);
+        double gphify = lin_interp(grad_phi[idx_gp+1], grad_phi[idx_gp_im1+1], area[idx_a+6]);
         loc_res += (phi[idx_phi_im1]-phi[idx_phi])*Ef/dCF + gphix * (-area[idx_a+2] - Ef * dCFx) + gphiy * (-area[idx_a+3] - Ef * dCFy);
         jac_c = -Ef/dCF;
         jac[idx_jac+1] = Ef/dCF;
@@ -234,8 +240,8 @@ __global__ void compute_r_j(double * phi, double * grad_phi, double *jac, double
         rFx = cell_center[idx_gp_ip1];
         rFy = cell_center[idx_gp_ip1 + 1];
         dCF = mag(rFx-rCx, rFy-rCy);
-        dCFx = (rFx - rCx/dCFx);
-        dCFy = (rFy - rCy/dCFx);
+        dCFx = (rFx - rCx)/dCF;
+        dCFy = (rFy - rCy)/dCF;
 
         Ef = (area[idx_a+7+2]*area[idx_a+7+2]+area[idx_a+7+3]*area[idx_a+7+3])/(dCFx * area[idx_a+7+2] + dCFy * area[idx_a+7+3]);
         gphifx = lin_interp(grad_phi[idx_gp_ip1], grad_phi[idx_gp], area[idx_a+7+6]);
@@ -249,8 +255,8 @@ __global__ void compute_r_j(double * phi, double * grad_phi, double *jac, double
             rFx = cell_center[idx_gp-nx*NDIM];
             rFy = cell_center[idx_gp-nx*NDIM + 1];
             dCF = mag(rFx-rCx, rFy-rCy);
-            dCFx = (rFx - rCx/dCFx);
-            dCFy = (rFy - rCy/dCFx);
+            dCFx = (rFx - rCx)/dCF;
+            dCFy = (rFy - rCy)/dCF;
 
             Ef = - (area[idx_a] * area[idx_a] + area[idx_a+1] * area[idx_a+1])/(dCFx * area[idx_a] + dCFy * area[idx_a+1]);
             gphifx = lin_interp(grad_phi[idx_gp], grad_phi[idx_gp-nx*NDIM], area[idx_a+5]);
@@ -272,8 +278,8 @@ __global__ void compute_r_j(double * phi, double * grad_phi, double *jac, double
             rFx = cell_center[idx_gp+nx*NDIM];
             rFy = cell_center[idx_gp+nx*NDIM + 1];
             dCF = mag(rFx-rCx, rFy-rCy);
-            dCFx = (rFx - rCx/dCFx);
-            dCFy = (rFy - rCy/dCFx);
+            dCFx = (rFx - rCx)/dCF;
+            dCFy = (rFy - rCy)/dCF;
 
             Ef = (area[idx_a+nxp*7]*area[idx_a+nxp*7]+area[idx_a+nxp*7+1]*area[idx_a+nxp*7+1])/(dCFx * area[idx_a+nxp*7] + dCFy * area[idx_a+nxp*7+1]);
             gphifx = lin_interp(grad_phi[idx_gp+nx*NDIM], grad_phi[idx_gp], area[idx_a+nxp*7+5]);
