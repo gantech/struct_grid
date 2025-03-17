@@ -53,13 +53,14 @@ __global__ void initialize_phi(double * pts, double * phi, double * phi_bc_bot, 
 
 }
 
-// Kernel to compute gradient of the reference field phi as 2x iHat + 3y^2 jHat
-__global__ void reference_grad_phi(double * pts, double * grad_phi_ref, int nx, int ny, int nxp, int nyp) {
+// Kernel to compute gradient of the reference field phi as 2x iHat + 3y^2 jHat and laplacian of the reference field as 2.0 + 6.0 * y
+__global__ void reference_grad_lapl_phi(double * pts, double * grad_phi_ref, double * lapl_phi_ref, int nx, int ny, int nxp, int nyp) {
 
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
     
     int idx_p = ( (j * nxp) + i ) * NDIM;
+    int idx_phi = ( j * nx + i);
     int idx_grad_phi = ( (j * nx) + i ) * NDIM;
 
     if ( (i < nx) && (j < ny)) { // Make sure you're within the grid
@@ -78,6 +79,7 @@ __global__ void reference_grad_phi(double * pts, double * grad_phi_ref, int nx, 
 
         grad_phi_ref[idx_grad_phi] = 2.0 * x;
         grad_phi_ref[idx_grad_phi + 1] = 3.0 * y * y;
+        lapl_phi_ref[idx_phi] = 2.0 + 6.0 * y;
 
     }
 
@@ -372,10 +374,15 @@ int main() {
     
     double * grad_phi_ref;
     cudaMalloc(&grad_phi_ref, ntot * NDIM * sizeof(double));
-    reference_grad_phi<<<grid, block>>>(pts, grad_phi_ref, nx, ny, nxp, nyp);
+    double * lapl_phi_ref;
+    cudaMalloc(&lapl_phi_ref, ntot * sizeof(double));
+    reference_grad_phi<<<grid, block>>>(pts, grad_phi_ref, lapl_phi, nx, ny, nxp, nyp);
     cudaDeviceSynchronize();
     double * h_grad_phi_ref = new double[ntot * NDIM];
     cudaMemcpy(h_grad_phi_ref, grad_phi_ref, ntot * NDIM * sizeof(double), cudaMemcpyDeviceToHost);
+    double * h_lapl_phi_ref = new double[ntot];
+    cudaMemcpy(h_lapl_phi_ref, lapl_phi_ref, ntot * sizeof(double), cudaMemcpyDeviceToHost);
+    
 
     double * grad_phi;
     cudaMalloc(&grad_phi, ntot * NDIM * sizeof(double));
@@ -441,6 +448,10 @@ int main() {
         grad_file << "LOOKUP_TABLE default" << std::endl;
         for (int i = 0; i < ntot; ++i)
             grad_file << h_res[i] << std::endl;
+        grad_file << "SCALARS residual double 1" << std::endl;
+        grad_file << "LOOKUP_TABLE default" << std::endl;
+        for (int i = 0; i < ntot; ++i)
+            grad_file << h_lapl_phi_ref[i] << std::endl;
         grad_file.close();
 
         std::cout << "Gradient of phi written to grad_phi.vtk" << std::endl;
