@@ -448,7 +448,7 @@ int main() {
         grad_file << "LOOKUP_TABLE default" << std::endl;
         for (int i = 0; i < ntot; ++i)
             grad_file << h_res[i] << std::endl;
-        grad_file << "SCALARS residual double 1" << std::endl;
+        grad_file << "SCALARS res_ref double 1" << std::endl;
         grad_file << "LOOKUP_TABLE default" << std::endl;
         for (int i = 0; i < ntot; ++i)
             grad_file << h_lapl_phi_ref[i] << std::endl;
