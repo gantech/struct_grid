@@ -297,7 +297,7 @@ __global__ void compute_r_j(double * phi, double * grad_phi, double *jac, double
             jac_c -= 1.0/dCF;
         }
 
-        res[idx_phi] = loc_res;
+        res[idx_phi] = loc_res/area[idx_a+4];
         jac[idx_jac] = jac_c;
 
     }
