@@ -396,7 +396,7 @@ int main() {
     cudaMalloc(&res, ntot * sizeof(double));
     double * jac;
     cudaMalloc(&jac, ntot * 5 * sizeof(double));
-    compute_r_j<<<grid, block>>>(phi, grad_phi, jac, res, area, phi_bc_bot, phi_bc_top, nx, ny, nxp, nyp);
+    compute_r_j<<<grid, block>>>(phi, grad_phi, jac, res, area, phi_bc_bot, phi_bc_top, cell_center, pts, nx, ny, nxp, nyp);
     cudaDeviceSynchronize();
 
     
