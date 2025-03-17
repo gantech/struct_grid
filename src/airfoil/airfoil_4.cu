@@ -267,12 +267,12 @@ __global__ void compute_r_j(double * phi, double * grad_phi, double *jac, double
             jac_c -= Ef/dCF;
             jac[idx_jac+3] = Ef/dCF;
         } else {
-            rFx = pts[i * NDIM];
-            rFy = pts[i * NDIM + 1];
+            rFx = 0.5 * (pts[i * NDIM] + pts[(i+1)*NDIM]);
+            rFy = 0.5 * (pts[i * NDIM + 1] + pts[ (i+1)*NDIM + 1]);
             dCF = mag(rFx-rCx, rFy-rCy);
 
             loc_res += (phi_bc_bot[i]-phi[idx_phi])*mag(area[idx_a], area[idx_a+1])/dCF;
-            jac_c -= 1.0/dCF;
+            jac_c -= mag(area[idx_a], area[idx_a+1])/dCF;
         }
 
         //North face
@@ -290,14 +290,14 @@ __global__ void compute_r_j(double * phi, double * grad_phi, double *jac, double
             jac_c -= Ef/dCF;
             jac[idx_jac+4] = Ef/dCF;
         } else if (j == (ny - 1)) {
-            rFx = pts[ (j * nxp + i) * NDIM];
-            rFy = pts[ (j * nxp + i) * NDIM + 1];
+            rFx = 0.5 * (pts[ (j * nxp + i) * NDIM] + pts[(j * nxp + (i+1) )* NDIM]);
+            rFy = 0.5 * (pts[ (j * nxp + i) * NDIM + 1] + pts[ (j * nxp + (i+1) )* NDIM + 1]);
             dCF = mag(rFx-rCx, rFy-rCy);
             loc_res += (phi_bc_top[i]-phi[idx_phi])*mag(area[idx_a+nxp*7], area[idx_a+nxp*7+1])/dCF;
-            jac_c -= 1.0/dCF;
+            jac_c -= mag(area[idx_a+nxp*7], area[idx_a+nxp*7+1])/dCF;
         }
 
-        res[idx_phi] = loc_res/area[idx_a+4];
+        res[idx_phi] = loc_res;
         jac[idx_jac] = jac_c;
 
     }
