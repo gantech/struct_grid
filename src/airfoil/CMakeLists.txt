@@ -22,5 +22,5 @@ set_target_properties(airfoil_grad3 PROPERTIES
 # Solve Laplace heat condution on airfoil
 add_executable(airfoil_4 airfoil_4.cu grid.cu)
 
-set_target_properties(airfoil_4 PROPERTOES
+set_target_properties(airfoil_4 PROPERTIES
     CUDA_ARCHITECTURES "90")
