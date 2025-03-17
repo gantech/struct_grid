@@ -24,3 +24,6 @@ add_executable(airfoil_4 airfoil_4.cu grid.cu)
 
 set_target_properties(airfoil_4 PROPERTIES
     CUDA_ARCHITECTURES "90")
+
+install(TARGETS airfoil_grad airfoil_grad2 airfoil_grad3 airfoil_4 DESTINATION bin)
+install(FILES du00w212.x  DESTINATION bin)
