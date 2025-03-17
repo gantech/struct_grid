@@ -271,7 +271,7 @@ __global__ void compute_r_j(double * phi, double * grad_phi, double *jac, double
             rFy = pts[i * NDIM + 1];
             dCF = mag(rFx-rCx, rFy-rCy);
 
-            loc_res += (phi_bc_bot[i]-phi[idx_phi])/dCF;
+            loc_res += (phi_bc_bot[i]-phi[idx_phi])*mag(area[idx_a], area[idx_a+1])/dCF;
             jac_c -= 1.0/dCF;
         }
 
@@ -293,7 +293,7 @@ __global__ void compute_r_j(double * phi, double * grad_phi, double *jac, double
             rFx = pts[ (j * nxp + i) * NDIM];
             rFy = pts[ (j * nxp + i) * NDIM + 1];
             dCF = mag(rFx-rCx, rFy-rCy);
-            loc_res += (phi_bc_top[i]-phi[idx_phi])/dCF;
+            loc_res += (phi_bc_top[i]-phi[idx_phi])*mag(area[idx_a+nxp*7], area[idx_a+nxp*7+1])/dCF;
             jac_c -= 1.0/dCF;
         }
 
