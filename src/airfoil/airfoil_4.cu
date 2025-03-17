@@ -376,7 +376,7 @@ int main() {
     cudaMalloc(&grad_phi_ref, ntot * NDIM * sizeof(double));
     double * lapl_phi_ref;
     cudaMalloc(&lapl_phi_ref, ntot * sizeof(double));
-    reference_grad_phi<<<grid, block>>>(pts, grad_phi_ref, lapl_phi, nx, ny, nxp, nyp);
+    reference_grad_lapl_phi<<<grid, block>>>(pts, grad_phi_ref, lapl_phi_ref, nx, ny, nxp, nyp);
     cudaDeviceSynchronize();
     double * h_grad_phi_ref = new double[ntot * NDIM];
     cudaMemcpy(h_grad_phi_ref, grad_phi_ref, ntot * NDIM * sizeof(double), cudaMemcpyDeviceToHost);
