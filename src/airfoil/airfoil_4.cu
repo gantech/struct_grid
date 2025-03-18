@@ -197,8 +197,8 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
     
         double phiip1j = phi[idx_phi_ip1];
         double phiim1j = phi[idx_phi_im1];
-        double x_w = 0.5 * (pts[idx_p] + pts[idx_p+nxp]);
-        double y_w = 0.5 * (pts[idx_p+1] + pts[idx_p+1+nxp]);
+        double x_w = 0.5 * (pts[idx_p] + pts[idx_p+nxp*NDIM]);
+        double y_w = 0.5 * (pts[idx_p+1] + pts[idx_p+1+nxp*NDIM]);
         if ( std::abs(lin_interp(phiij, phiim1j, area[idx_a + 6]) - phi_ref(x_w, y_w) ) / phi_ref(x_w, y_w) > 0.1 ) 
             printf("West face - interpolated phi = %e, supposed to be %e, i = %d, j = %d, x = %e, y = %e, cell_center = %e, %e, phi_e = %e, phi_w = %e, interp = %e \n", lin_interp(phiij, phiim1j, area[idx_a + 6]), phi_ref(x_w, y_w), i, j, x_w, y_w, cell_center[idx_phi], cell_center[idx_phi+1], phiij, phiim1j, area[idx_a + 6]);
         double x_e = 0.5*(pts[idx_p+NDIM] + pts[idx_p+(nxp+1)*NDIM]);
