@@ -92,9 +92,9 @@ __global__ void reference_grad_lapl_phi(double * pts, double * grad_phi_ref, dou
         double x = 0.25 * (xij + xip1j + xijp1 + xip1jp1);
         double y = 0.25 * (yij + yip1j + yijp1 + yip1jp1);
 
-        grad_phi_ref[idx_grad_phi] = 0.0;
-        grad_phi_ref[idx_grad_phi + 1] = 0.0;
-        lapl_phi_ref[idx_phi] = 0.0;
+        grad_phi_ref[idx_grad_phi] = 2.0 * x;
+        grad_phi_ref[idx_grad_phi + 1] = 3.0 * y * y;
+        lapl_phi_ref[idx_phi] = 2.0 + 6.0 * y;
 
     }
 
