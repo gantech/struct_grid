@@ -38,7 +38,7 @@ __global__ void initialize_phi(double * pts, double * phi, double * phi_bc_bot, 
         double y = 0.25 * (yij + yip1j + yijp1 + yip1jp1);
 
         // phi[idx_phi] = x * x + y * y * y;
-        phi[idx_phi] 1.0;
+        phi[idx_phi] = 1.0;
 
         if (j == 0) {
             x = 0.5 * (xij + xip1j);
