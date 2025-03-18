@@ -165,8 +165,8 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
             double y_s = 0.5 * (pts[idx_p+1] + pts[idx_p+1+NDIM]);
             double x_n = 0.5 * (pts[idx_p+nxp*NDIM] + pts[idx_p+(nxp+1)*NDIM]);
             double y_n = 0.5 * (pts[idx_p+1+nxp*NDIM] + pts[idx_p+(nxp+1)*NDIM+1]);
-            printf("North face - interpolated phi = %e, supposed to be %e",(area[idx_a + nxp * 7 + 5] * phiijp1 + (1.0 - area[idx_a + nxp * 7 + 5]) * phiij), phi_ref(x_n, y_n));
-            printf("South face - interpolated phi = %e, supposed to be %e",(area[idx_a + 5] * phiij + (1.0 - area[idx_a + 5]) * phiijm1 ), phi_ref(x_s, y_s));
+            printf("North face - interpolated phi = %e, supposed to be %e \n",(area[idx_a + nxp * 7 + 5] * phiijp1 + (1.0 - area[idx_a + nxp * 7 + 5]) * phiij), phi_ref(x_n, y_n));
+            printf("South face - interpolated phi = %e, supposed to be %e \n",(area[idx_a + 5] * phiij + (1.0 - area[idx_a + 5]) * phiijm1 ), phi_ref(x_s, y_s));
             phi_etax_s = (area[idx_a + 5] * phiij + (1.0 - area[idx_a + 5]) * phiijm1 ) * area[idx_a];
             phi_etax_n = (area[idx_a + nxp * 7 + 5] * phiijp1 + (1.0 - area[idx_a + nxp * 7 + 5]) * phiij ) * area[idx_a + nxp * 7];
             phi_etay_s = (area[idx_a + 5] * phiij + (1.0 - area[idx_a + 5]) * phiijm1 ) * area[idx_a + 1];
@@ -178,10 +178,10 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
         double phiim1j = phi[idx_phi_im1];
         double x_w = 0.5 * (pts[idx_p] + pts[idx_p+nxp]);
         double y_w = 0.5 * (pts[idx_p+1] + pts[idx_p+1+nxp]);
-        printf("West face - interpolated phi = %e, supposed to be %e", ( area[idx_a + 6] * phiij + (1.0 - area[idx_a + 6]) * phiim1j ), phi_ref(x_w, y_w) );
+        printf("West face - interpolated phi = %e, supposed to be %e \n", ( area[idx_a + 6] * phiij + (1.0 - area[idx_a + 6]) * phiim1j ), phi_ref(x_w, y_w) );
         double x_e = 0.5*(pts[idx_p+NDIM] + pts[idx_p+(nxp+1)*NDIM]);
         double y_e = 0.5*(pts[idx_p+1+NDIM] + pts[idx_p+(nxp+1)*NDIM+1]);
-        printf("East face - interpolated phi = %e, supposed to be %e",  ( area[idx_a + 7 + 6] * phiip1j + (1.0 - area[idx_a + 7 + 6]) * phiij ), phi_ref(x_e, y_e) );
+        printf("East face - interpolated phi = %e, supposed to be %e \n",  ( area[idx_a + 7 + 6] * phiip1j + (1.0 - area[idx_a + 7 + 6]) * phiij ), phi_ref(x_e, y_e) );
         phi_xix_w = ( area[idx_a + 6] * phiij + (1.0 - area[idx_a + 6]) * phiim1j ) * area[idx_a + 2];
         phi_xix_e = ( area[idx_a + 7 + 6] * phiip1j + (1.0 - area[idx_a + 7 + 6]) * phiij ) * area[idx_a + 7 + 2];
         phi_xiy_w = ( area[idx_a + 6] * phiij + (1.0 - area[idx_a + 6]) * phiim1j ) * area[idx_a + 3];
