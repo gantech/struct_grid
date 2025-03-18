@@ -37,16 +37,19 @@ __global__ void initialize_phi(double * pts, double * phi, double * phi_bc_bot, 
         double x = 0.25 * (xij + xip1j + xijp1 + xip1jp1);
         double y = 0.25 * (yij + yip1j + yijp1 + yip1jp1);
 
-        phi[idx_phi] = x * x + y * y * y;
+        // phi[idx_phi] = x * x + y * y * y;
+        phi[idx_phi] 1.0;
 
         if (j == 0) {
             x = 0.5 * (xij + xip1j);
             y = 0.5 * (yij + yip1j);
-            phi_bc_bot[i] = x * x + y * y * y;
+            // phi_bc_bot[i] = x * x + y * y * y;
+            phi_bc_bot[i] = 1.0;
         } else if ( j == (ny - 1)) {
             x = 0.5 * (xijp1 + xip1jp1);
             y = 0.5 * (yijp1 + yip1jp1);
-            phi_bc_top[i] = x * x + y * y * y;
+            // phi_bc_top[i] = x * x + y * y * y;
+            phi_bc_top[i] = 1.0;
         }
 
     }
@@ -77,9 +80,9 @@ __global__ void reference_grad_lapl_phi(double * pts, double * grad_phi_ref, dou
         double x = 0.25 * (xij + xip1j + xijp1 + xip1jp1);
         double y = 0.25 * (yij + yip1j + yijp1 + yip1jp1);
 
-        grad_phi_ref[idx_grad_phi] = 2.0 * x;
-        grad_phi_ref[idx_grad_phi + 1] = 3.0 * y * y;
-        lapl_phi_ref[idx_phi] = 2.0 + 6.0 * y;
+        grad_phi_ref[idx_grad_phi] = 0.0;
+        grad_phi_ref[idx_grad_phi + 1] = 0.0;
+        lapl_phi_ref[idx_phi] = 0.0;
 
     }
 
