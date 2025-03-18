@@ -307,10 +307,11 @@ __global__ void compute_r_j(double * phi, double * grad_phi, double *jac, double
             loc_res += (phi[idx_phi-nx]-phi[idx_phi])*Ef/dCF + gphifx * (-area[idx_a] - Ef * dCFx) + gphify * (-area[idx_a+1] - Ef * dCFy);
             jac_c -= Ef/dCF;
             jac[idx_jac+3] = Ef/dCF;
-        } else {
+        else {
             rFx = 0.5 * (pts[i * NDIM] + pts[(i+1)*NDIM]);
             rFy = 0.5 * (pts[i * NDIM + 1] + pts[ (i+1)*NDIM + 1]);
             dCF = mag(rFx-rCx, rFy-rCy);
+            printf("rf = %e, %e, Cell_center = %e, %e, dCF = %e", rFx, rFy, rCx, rCy, dCF);
 
             loc_res += (phi_bc_bot[i]-phi[idx_phi])*mag(area[idx_a], area[idx_a+1])/dCF;
             jac_c -= mag(area[idx_a], area[idx_a+1])/dCF;
