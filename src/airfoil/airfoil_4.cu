@@ -37,19 +37,16 @@ __global__ void initialize_phi(double * pts, double * phi, double * phi_bc_bot, 
         double x = 0.25 * (xij + xip1j + xijp1 + xip1jp1);
         double y = 0.25 * (yij + yip1j + yijp1 + yip1jp1);
 
-        // phi[idx_phi] = x * x + y * y * y;
-        phi[idx_phi] = 1.0;
+        phi[idx_phi] = x * x + y * y * y;
 
         if (j == 0) {
             x = 0.5 * (xij + xip1j);
             y = 0.5 * (yij + yip1j);
-            // phi_bc_bot[i] = x * x + y * y * y;
-            phi_bc_bot[i] = 1.0;
+            phi_bc_bot[i] = x * x + y * y * y;
         } else if ( j == (ny - 1)) {
             x = 0.5 * (xijp1 + xip1jp1);
             y = 0.5 * (yijp1 + yip1jp1);
-            // phi_bc_top[i] = x * x + y * y * y;
-            phi_bc_top[i] = 1.0;
+            phi_bc_top[i] = x * x + y * y * y;
         }
 
     }
@@ -117,8 +114,7 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
     int idx_gp = (j * nx + i) * NDIM;
 
     int idx_a = (j * nxp + i) * 7;
-
-
+    int idx_p = (j * nxp + i) * NDIM;
 
     if ( (i < nx) && (j < ny)) { // Make sure you're within the grid
         // printf("BlockIdx.x %d, BlockIdx.y %d, threadIdx.x %d, threadIdx.y %d, i = %d, j = %d - idx_gp %d\n", blockIdx.x, blockIdx.y, threadIdx.x, threadIdx.y, i, j, idx_gp);
@@ -161,6 +157,12 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
 
             double phiijm1 = phi[idx_phi - nx];
             double phiijp1 = phi[idx_phi + nx];
+            double x_s = 0.5 * (pts[idx_p] + pts[idx_p+NDIM]);
+            double y_s = 0.5 * (pts[idx_p+1] + pts[idx_p+1+NDIM]);
+            double x_n = 0.5 * (pts[idx_p+nxp*NDIM] + pts[idx_p+(nxp+1)*NDIM]);
+            double y_n = 0.5 * (pts[idx_p+1+nxp*NDIM] + pts[idx_p+(nxp+1)*NDIM+1]);
+            printf("North face - interpolated phi = %e, supposed to be %e",(area[idx_a + nxp * 7 + 5] * phiijp1 + (1.0 - area[idx_a + nxp * 7 + 5]) * phiij), phi_ref(x_n, y_n));
+            printf("South face - interpolated phi = %e, supposed to be %e",(area[idx_a + 5] * phiij + (1.0 - area[idx_a + 5]) * phiijm1 ), phi_ref(x_s, y_s));
             phi_etax_s = (area[idx_a + 5] * phiij + (1.0 - area[idx_a + 5]) * phiijm1 ) * area[idx_a];
             phi_etax_n = (area[idx_a + nxp * 7 + 5] * phiijp1 + (1.0 - area[idx_a + nxp * 7 + 5]) * phiij ) * area[idx_a + nxp * 7];
             phi_etay_s = (area[idx_a + 5] * phiij + (1.0 - area[idx_a + 5]) * phiijm1 ) * area[idx_a + 1];
@@ -170,6 +172,12 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
     
         double phiip1j = phi[idx_phi_ip1];
         double phiim1j = phi[idx_phi_im1];
+        double x_w = 0.5 * (pts[idx_p] + pts[idx_p+nxp]);
+        double y_w = 0.5 * (pts[idx_p+1] + pts[idx_p+1+nxp]);
+        printf("West face - interpolated phi = %e, supposed to be %e", ( area[idx_a + 6] * phiij + (1.0 - area[idx_a + 6]) * phiim1j ), phi_ref(x_w, y_w) );
+        double x_e = 0.5*(pts[idx_p+NDIM] + pts[idx_p+(nxp+1)*NDIM]);
+        double y_e = 0.5*(pts[idx_p+1+NDIM] + pts[idx_p+(nxp+1)*NDIM+1]);
+        printf("East face - interpolated phi = %e, supposed to be %e",  ( area[idx_a + 7 + 6] * phiip1j + (1.0 - area[idx_a + 7 + 6]) * phiij ), phi_ref(x_e, y_e) );
         phi_xix_w = ( area[idx_a + 6] * phiij + (1.0 - area[idx_a + 6]) * phiim1j ) * area[idx_a + 2];
         phi_xix_e = ( area[idx_a + 7 + 6] * phiip1j + (1.0 - area[idx_a + 7 + 6]) * phiij ) * area[idx_a + 7 + 2];
         phi_xiy_w = ( area[idx_a + 6] * phiij + (1.0 - area[idx_a + 6]) * phiim1j ) * area[idx_a + 3];
@@ -186,6 +194,10 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
         // if (i == 0)
         //     printf("i %d, j %d, grad_phi_x = %e, phi_xiy_e = %e, phi_xiy_w = %e, phi_etay_n = %e, phi_etay_s = %e, Areas: (S) %e, %e, (N) %e, %e, (E) %e, %e, (W) %e, %e, Phi (I-1) %e, (I), %e, (I+1) %e, (J-1) %e, (J+1) %e\n", i, j, tmp1, phi_xiy_e, phi_xiy_w, phi_etay_n, phi_etay_s, area[idx_a], area[idx_a+1], area[idx_a+nxp*7], area[idx_a+nxp*7+1], area[idx_a+7+2], area[idx_a+7+3], area[idx_a+2], area[idx_a+3], phiim1j, phiij, phiip1j, phiijm1, phiijp1);
     }
+}
+
+__device__ __inline__ double phi_ref(double x, double y) {
+    return x * x + y * y * y;
 }
 
 // Inline device function (can be called from kernels)
