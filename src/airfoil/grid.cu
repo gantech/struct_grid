@@ -137,6 +137,9 @@ __global__ void compute_if(double * pts, double * cell_center, double * area, in
         if ( std::isinf(t1) || std::isnan(t1)) {
             printf("i %d, j %d - t1 = %e, x, y = (%e, %e), xu, yu = (%e, %e), xim1, yim1 = (%e, %e), xi, yi = (%e, %e) \n", i , j, t1, x, y, xu, yu, xim1, yim1, xi, yi );
         }
+        if ( j == 0) {
+            printf("i %d, j %d - t1 = %e, x, y = (%e, %e), xu, yu = (%e, %e), xim1, yim1 = (%e, %e), xi, yi = (%e, %e) \n", i , j, t1, x, y, xu, yu, xim1, yim1, xi, yi );
+        }
         area[idx_a + 5] = t1;
 
     if ( (j > 0) && (j < ny) ) {
