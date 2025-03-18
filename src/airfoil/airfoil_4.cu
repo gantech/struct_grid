@@ -147,6 +147,8 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
         double phiijp1 = 0.0;
         double phiijm1 = 0.0;
 
+        double pdiff = 0.0;
+
         if (j < (ny -1 ))
             phiijp1 = phi[idx_phi + nx];
         if (j > 0)
@@ -180,10 +182,12 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
             double y_s = 0.5 * (pts[idx_p+1] + pts[idx_p+1+NDIM]);
             double x_n = 0.5 * (pts[idx_p+nxp*NDIM] + pts[idx_p+(nxp+1)*NDIM]);
             double y_n = 0.5 * (pts[idx_p+1+nxp*NDIM] + pts[idx_p+(nxp+1)*NDIM+1]);
-            if ( std::abs(lin_interp(phiijp1, phiij, area[idx_a + nxp * 7 + 5]) - phi_ref(x_n, y_n)) / phi_ref(x_n, y_n) > 0.1)
-                printf("North face - interpolated phi = %e, supposed to be %e, i = %d, j = %d, x = %e, y = %e, cell_center = %e, %e, phi_n = %e, phi_s = %e, interp = %e \n", lin_interp(phiijp1, phiij, area[idx_a + nxp * 7 + 5]), phi_ref(x_n, y_n), i, j, x_n, y_n, cell_center[idx_phi], cell_center[idx_phi+1], phiijp1, phiij, area[idx_a + nxp * 7 + 5]);
-            if ( std::abs(lin_interp(phiij, phiijm1, area[idx_a + 5]) - phi_ref(x_s, y_s)) / phi_ref(x_s, y_s) > 0.1)
-                printf("South face - interpolated phi = %e, supposed to be %e, i = %d, j = %d, x = %e, y = %e, cell_center = %e, %e, phi_n = %e, phi_s = %e, interp = %e \n", lin_interp(phiij, phiijm1, area[idx_a + 5]), phi_ref(x_s, y_s), i, j, x_s, y_s, cell_center[idx_phi], cell_center[idx_phi+1], phiij, phiijm1, area[idx_a + 5]);
+            pdiff = std::abs(lin_interp(phiijp1, phiij, area[idx_a + nxp * 7 + 5]) - phi_ref(x_n, y_n)) / phi_ref(x_n, y_n);
+            if ( pdiff > 0.1)
+                printf("North face - pdiff = %e, - interpolated phi = %e, supposed to be %e, i = %d, j = %d, x = %e, y = %e, cell_center = %e, %e, phi_n = %e, phi_s = %e, interp = %e \n", pdiff, lin_interp(phiijp1, phiij, area[idx_a + nxp * 7 + 5]), phi_ref(x_n, y_n), i, j, x_n, y_n, cell_center[idx_phi], cell_center[idx_phi+1], phiijp1, phiij, area[idx_a + nxp * 7 + 5]);
+            pdiff = std::abs(lin_interp(phiij, phiijm1, area[idx_a + 5]) - phi_ref(x_s, y_s)) / phi_ref(x_s, y_s);
+            if ( pdiff > 0.1)
+                printf("South face - pdiff = %e, interpolated phi = %e, supposed to be %e, i = %d, j = %d, x = %e, y = %e, cell_center = %e, %e, phi_n = %e, phi_s = %e, interp = %e \n", pdiff, lin_interp(phiij, phiijm1, area[idx_a + 5]), phi_ref(x_s, y_s), i, j, x_s, y_s, cell_center[idx_phi], cell_center[idx_phi+1], phiij, phiijm1, area[idx_a + 5]);
             phi_x_s = lin_interp(phiij, phiijm1, area[idx_a + 5]) * area[idx_a];
             phi_x_n = lin_interp(phiijp1, phiij, area[idx_a + nxp * 7 + 5]) * area[idx_a + nxp * 7];
             phi_y_s = lin_interp(phiij, phiijm1, area[idx_a + 5]) * area[idx_a + 1];
@@ -199,12 +203,14 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
         double phiim1j = phi[idx_phi_im1];
         double x_w = 0.5 * (pts[idx_p] + pts[idx_p+nxp*NDIM]);
         double y_w = 0.5 * (pts[idx_p+1] + pts[idx_p+1+nxp*NDIM]);
-        if ( std::abs(lin_interp(phiij, phiim1j, area[idx_a + 6]) - phi_ref(x_w, y_w) ) / phi_ref(x_w, y_w) > 0.1 ) 
-            printf("West face - interpolated phi = %e, supposed to be %e, i = %d, j = %d, x = %e, y = %e, cell_center = %e, %e, phi_e = %e, phi_w = %e, interp = %e \n", lin_interp(phiij, phiim1j, area[idx_a + 6]), phi_ref(x_w, y_w), i, j, x_w, y_w, cell_center[idx_phi], cell_center[idx_phi+1], phiij, phiim1j, area[idx_a + 6]);
+        pdiff = std::abs(lin_interp(phiij, phiim1j, area[idx_a + 6]) - phi_ref(x_w, y_w) ) / phi_ref(x_w, y_w);
+        if ( pdiff > 0.1 ) 
+            printf("West face - pdiff = %e, interpolated phi = %e, supposed to be %e, i = %d, j = %d, x = %e, y = %e, cell_center = %e, %e, phi_e = %e, phi_w = %e, interp = %e \n", pdiff, lin_interp(phiij, phiim1j, area[idx_a + 6]), phi_ref(x_w, y_w), i, j, x_w, y_w, cell_center[idx_phi], cell_center[idx_phi+1], phiij, phiim1j, area[idx_a + 6]);
         double x_e = 0.5*(pts[idx_p+NDIM] + pts[idx_p+(nxp+1)*NDIM]);
         double y_e = 0.5*(pts[idx_p+1+NDIM] + pts[idx_p+(nxp+1)*NDIM+1]);
-        if ( std::abs(lin_interp(phiip1j, phiij, area[idx_a + 7 + 6]) - phi_ref(x_e, y_e) ) / phi_ref(x_e, y_e) > 0.1 )
-            printf("East face - interpolated phi = %e, supposed to be %e, i = %d, j = %d, x = %e, y = %e, cell_center = %e, %e, phi_e = %e, phi_w = %e, interp = %e \n",  lin_interp(phiip1j, phiij, area[idx_a + 7 + 6]), phi_ref(x_e, y_e), i, j, x_e, y_e, cell_center[idx_phi], cell_center[idx_phi+1], phiip1j, phiij, area[idx_a + 7 + 6]);
+        pdiff = std::abs(lin_interp(phiip1j, phiij, area[idx_a + 7 + 6]) - phi_ref(x_e, y_e) ) / phi_ref(x_e, y_e);
+        if ( pdiff > 0.1 )
+            printf("East face - pdiff = %e, interpolated phi = %e, supposed to be %e, i = %d, j = %d, x = %e, y = %e, cell_center = %e, %e, phi_e = %e, phi_w = %e, interp = %e \n", pdiff, lin_interp(phiip1j, phiij, area[idx_a + 7 + 6]), phi_ref(x_e, y_e), i, j, x_e, y_e, cell_center[idx_phi], cell_center[idx_phi+1], phiip1j, phiij, area[idx_a + 7 + 6]);
         
 
         phi_x_w = lin_interp(phiij, phiim1j, area[idx_a + 6]) * area[idx_a + 2];
