@@ -200,11 +200,11 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
         double x_w = 0.5 * (pts[idx_p] + pts[idx_p+nxp]);
         double y_w = 0.5 * (pts[idx_p+1] + pts[idx_p+1+nxp]);
         if ( std::abs(lin_interp(phiij, phiim1j, area[idx_a + 6]) - phi_ref(x_w, y_w) ) / phi_ref(x_w, y_w) > 0.01 ) 
-            printf("West face - interpolated phi = %e, supposed to be %e \n", lininterp(phiij, phiim1j, area[idx_a + 6]), phi_ref(x_w, y_w) );
+            printf("West face - interpolated phi = %e, supposed to be %e \n", lin_interp(phiij, phiim1j, area[idx_a + 6]), phi_ref(x_w, y_w) );
         double x_e = 0.5*(pts[idx_p+NDIM] + pts[idx_p+(nxp+1)*NDIM]);
         double y_e = 0.5*(pts[idx_p+1+NDIM] + pts[idx_p+(nxp+1)*NDIM+1]);
         if ( std::abs(lin_interp(phiip1j, phiij, area[idx_a + 7 + 6]) - phi_ref(x_e, y_e) ) / phi_ref(x_e, y_e) > 0.01 )
-            printf("East face - interpolated phi = %e, supposed to be %e \n",  lininterp(phiip1j, phiij, area[idx_a + 7 + 6]), phi_ref(x_e, y_e) );
+            printf("East face - interpolated phi = %e, supposed to be %e \n",  lin_interp(phiip1j, phiij, area[idx_a + 7 + 6]), phi_ref(x_e, y_e) );
 
         phi_x_w = lin_interp(phiij, phiim1j, area[idx_a + 6]) * area[idx_a + 2];
         phi_x_e = lin_interp(phiip1j, phiij, area[idx_a + 7 + 6]) * area[idx_a + 7 + 2];
