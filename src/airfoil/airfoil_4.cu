@@ -105,7 +105,7 @@ __global__ void reference_grad_lapl_phi(double * pts, double * grad_phi_ref, dou
         phi_y = 1/J ( (phi * alpha_psi_y)_psi + (phi * alpha_eta_y)_eta )
    
 */
-__global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad_phi_ref,  double * area, double * phi_bc_bot, double * phi_bc_top, int nx, int ny, int nxp, int nyp) {
+__global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad_phi_ref,  double * area, double * pts, double * phi_bc_bot, double * phi_bc_top, int nx, int ny, int nxp, int nyp) {
 
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -402,7 +402,7 @@ int main() {
     double * grad_phi;
     cudaMalloc(&grad_phi, ntot * NDIM * sizeof(double));
     // Calculate the gradient of phi
-    vector_grad_gauss<<<grid, block>>>(phi, grad_phi, grad_phi_ref, area, phi_bc_bot, phi_bc_top, nx, ny, nxp, nyp);
+    vector_grad_gauss<<<grid, block>>>(phi, grad_phi, grad_phi_ref, area, pts, phi_bc_bot, phi_bc_top, nx, ny, nxp, nyp);
     cudaDeviceSynchronize();
  
     // Check for launch errors
