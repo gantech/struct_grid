@@ -339,7 +339,7 @@ __global__ void compute_r_j(double * phi, double * grad_phi, double *jac, double
             jac_c -= mag(area[idx_a+nxp*7], area[idx_a+nxp*7+1])/dCF;
         }
 
-        res[idx_phi] = loc_res;
+        res[idx_phi] = loc_res - (2.0 + 6.0 * cell_center[idx_gp+1]) * area[idx_a+5];
         jac[idx_jac] = jac_c;
 
     }
