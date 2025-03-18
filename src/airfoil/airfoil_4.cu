@@ -160,7 +160,7 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
             phi_x_s = phi_bc_bot[i]  * area[idx_a];
             phi_y_s = phi_bc_bot[i]  * area[idx_a + 1];
             phi_x_n = lin_interp(phiijp1, phiij, area[idx_a + nxp * 7 + 5]) * area[idx_a + nxp * 7];
-            phi_y_s = lin_interp(phiijp1, phiij, area[idx_a + nxp * 7 + 5]) * area[idx_a + nxp * 7 + 1];
+            phi_y_n = lin_interp(phiijp1, phiij, area[idx_a + nxp * 7 + 5]) * area[idx_a + nxp * 7 + 1];
             // phi_etax_n = (area[idx_a + nxp  * 7 + 5] * phiijp1 + (1.0 - area[idx_a + nxp * 7 + 5]) * phiij ) * area[idx_a + nxp * 7];
             // phi_etay_n = (area[idx_a + nxp * 7 + 5] * phiijp1 + (1.0 - area[idx_a + nxp * 7 + 5]) * phiij ) * area[idx_a + nxp * 7 + 1];         
 
