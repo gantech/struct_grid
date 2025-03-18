@@ -120,10 +120,10 @@ __global__ void compute_if(double * pts, double * cell_center, double * area, in
             xi = cell_center[idx_cc];
             yi = cell_center[idx_cc+1];           
         } else if (i == (nxp-1)) {
-            xim1 = cell_center[j * nx + (nx-1)*NDIM];
-            yim1 = cell_center[j * nx + (nx-1)*NDIM+1];
-            xi = cell_center[j * nx];
-            yi = cell_center[j * nx + 1];
+            xim1 = cell_center[(j * nx + (nx-1))*NDIM];
+            yim1 = cell_center[(j * nx + (nx-1))*NDIM+1];
+            xi = cell_center[(j * nx)*NDIM];
+            yi = cell_center[(j * nx)*NDIM + 1];
         } else {
             xim1 = cell_center[idx_cc-NDIM];
             yim1 = cell_center[idx_cc-NDIM+1];
