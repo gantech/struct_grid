@@ -133,15 +133,15 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
 
     if ( (i < nx) && (j < ny)) { // Make sure you're within the grid
         // printf("BlockIdx.x %d, BlockIdx.y %d, threadIdx.x %d, threadIdx.y %d, i = %d, j = %d - idx_gp %d\n", blockIdx.x, blockIdx.y, threadIdx.x, threadIdx.y, i, j, idx_gp);
-        double phi_xix_e = 0.0;
-        double phi_xix_w = 0.0;
-        double phi_xiy_e = 0.0;
-        double phi_xiy_w = 0.0;
+        double phi_x_e = 0.0;
+        double phi_x_w = 0.0;
+        double phi_y_e = 0.0;
+        double phi_y_w = 0.0;
 
-        double phi_etax_n = 0.0;
-        double phi_etay_n = 0.0;
-        double phi_etax_s = 0.0;
-        double phi_etay_s = 0.0;
+        double phi_x_n = 0.0;
+        double phi_y_n = 0.0;
+        double phi_x_s = 0.0;
+        double phi_y_s = 0.0;
 
         double phiij = phi[idx_phi];
         double phiijp1 = 0.0;
@@ -199,17 +199,17 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
         double phiim1j = phi[idx_phi_im1];
         double x_w = 0.5 * (pts[idx_p] + pts[idx_p+nxp]);
         double y_w = 0.5 * (pts[idx_p+1] + pts[idx_p+1+nxp]);
-        if ( std::abs(lininterp(phiij, phiim1j, area[idx_a + 6]) - phi_ref(x_w, y_w) ) / phi_ref(x_w, y_w) > 0.01 ) 
+        if ( std::abs(lin_interp(phiij, phiim1j, area[idx_a + 6]) - phi_ref(x_w, y_w) ) / phi_ref(x_w, y_w) > 0.01 ) 
             printf("West face - interpolated phi = %e, supposed to be %e \n", lininterp(phiij, phiim1j, area[idx_a + 6]), phi_ref(x_w, y_w) );
         double x_e = 0.5*(pts[idx_p+NDIM] + pts[idx_p+(nxp+1)*NDIM]);
         double y_e = 0.5*(pts[idx_p+1+NDIM] + pts[idx_p+(nxp+1)*NDIM+1]);
-        if ( std::abs(lininterp(phiip1j, phiij, area[idx_a + 7 + 6]) - phi_ref(x_e, y_e) ) / phi_ref(x_e, y_e) > 0.01 )
+        if ( std::abs(lin_interp(phiip1j, phiij, area[idx_a + 7 + 6]) - phi_ref(x_e, y_e) ) / phi_ref(x_e, y_e) > 0.01 )
             printf("East face - interpolated phi = %e, supposed to be %e \n",  lininterp(phiip1j, phiij, area[idx_a + 7 + 6]), phi_ref(x_e, y_e) );
 
-        phi_x_w = lininterp(phiij, phiim1j, area[idx_a + 6]) * area[idx_a + 2];
-        phi_x_e = lininterp(phiip1j, phiij, area[idx_a + 7 + 6]) * area[idx_a + 7 + 2];
-        phi_y_w = lininterp(phiij, phiim1j, area[idx_a + 6]) * area[idx_a + 3];
-        phi_y_e = lininterp(phiip1j, phiij, area[idx_a + 7 + 6]) * area[idx_a + 7 + 3];
+        phi_x_w = lin_interp(phiij, phiim1j, area[idx_a + 6]) * area[idx_a + 2];
+        phi_x_e = lin_interp(phiip1j, phiij, area[idx_a + 7 + 6]) * area[idx_a + 7 + 2];
+        phi_y_w = lin_interp(phiij, phiim1j, area[idx_a + 6]) * area[idx_a + 3];
+        phi_y_e = lin_interp(phiip1j, phiij, area[idx_a + 7 + 6]) * area[idx_a + 7 + 3];
         
         // phi_xix_w = ( area[idx_a + 6] * phiij + (1.0 - area[idx_a + 6]) * phiim1j ) * area[idx_a + 2];
         // phi_xix_e = ( area[idx_a + 7 + 6] * phiip1j + (1.0 - area[idx_a + 7 + 6]) * phiij ) * area[idx_a + 7 + 2];
