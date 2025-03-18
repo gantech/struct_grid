@@ -157,8 +157,8 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
             double phiijp1 = phi[idx_phi + nx];
             phi_x_s = phi_bc_bot[i]  * area[idx_a];
             phi_y_s = phi_bc_bot[i]  * area[idx_a + 1];
-            phi_x_n = lin_interp(phijp1, phiij, area[idx_a + nxp * 7 + 5]) * area[idx_a + nxp * 7];
-            phi_y_s = lin_interp(phijp1, phiij, area[idx_a + nxp * 7 + 5]) * area[idx_a + nxp * 7 + 1];
+            phi_x_n = lin_interp(phiijp1, phiij, area[idx_a + nxp * 7 + 5]) * area[idx_a + nxp * 7];
+            phi_y_s = lin_interp(phiijp1, phiij, area[idx_a + nxp * 7 + 5]) * area[idx_a + nxp * 7 + 1];
             // phi_etax_n = (area[idx_a + nxp  * 7 + 5] * phiijp1 + (1.0 - area[idx_a + nxp * 7 + 5]) * phiij ) * area[idx_a + nxp * 7];
             // phi_etay_n = (area[idx_a + nxp * 7 + 5] * phiijp1 + (1.0 - area[idx_a + nxp * 7 + 5]) * phiij ) * area[idx_a + nxp * 7 + 1];         
 
@@ -180,10 +180,10 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
             double y_s = 0.5 * (pts[idx_p+1] + pts[idx_p+1+NDIM]);
             double x_n = 0.5 * (pts[idx_p+nxp*NDIM] + pts[idx_p+(nxp+1)*NDIM]);
             double y_n = 0.5 * (pts[idx_p+1+nxp*NDIM] + pts[idx_p+(nxp+1)*NDIM+1]);
-            if ( std::abs(lin_interp(phijp1, phiij, area[idx_a + nxp * 7 + 5]) - phi_ref(x_n, y_n)) / phi_ref(x_n, y_n) > 0.01)
-                printf("North face - interpolated phi = %e, supposed to be %e \n",lininterp(), phi_ref(x_n, y_n));
+            if ( std::abs(lin_interp(phiijp1, phiij, area[idx_a + nxp * 7 + 5]) - phi_ref(x_n, y_n)) / phi_ref(x_n, y_n) > 0.01)
+                printf("North face - interpolated phi = %e, supposed to be %e \n",lin_interp(phiijp1, phiij, area[idx_a + nxp * 7 + 5]), phi_ref(x_n, y_n));
             if ( std::abs(lin_interp(phiij, phiijm1, area[idx_a + 5]) - phi_ref(x_s, y_s)) / phi_ref(x_s, y_s) > 0.01)
-                printf("South face - interpolated phi = %e, supposed to be %e \n",(area[idx_a + 5] * phiij + (1.0 - area[idx_a + 5]) * phiijm1 ), phi_ref(x_s, y_s));
+                printf("South face - interpolated phi = %e, supposed to be %e \n", lin_interp(phiij, phiijm1, area[idx_a + 5]), phi_ref(x_s, y_s));
             phi_x_s = lin_interp(phiij, phiijm1, area[idx_a + 5]) * area[idx_a];
             phi_x_n = lin_interp(phijp1, phiij, area[idx_a + nxp * 7 + 5]) * area[idx_a + nxp * 7];
             phi_y_s = lin_interp(phiij, phiijm1, area[idx_a + 5]) * area[idx_a + 1];
