@@ -13,6 +13,10 @@ __global__ void compute_if(double * pts, double * cell_center, double * area, in
 __global__ void compute_cellcenter(double * pts, double * cell_center, int nx, int ny, int nxp, int nyp) ;
 
 
+// Reference phi calculation
+__device__ __inline__ double phi_ref(double x, double y) {
+    return x * x + y * y * y;
+}
 
 // Kernel to initialize a field phi as x^2 + y^3
 __global__ void initialize_phi(double * pts, double * phi, double * phi_bc_bot, double * phi_bc_top, int nx, int ny, int nxp, int nyp) {
@@ -37,16 +41,16 @@ __global__ void initialize_phi(double * pts, double * phi, double * phi_bc_bot, 
         double x = 0.25 * (xij + xip1j + xijp1 + xip1jp1);
         double y = 0.25 * (yij + yip1j + yijp1 + yip1jp1);
 
-        phi[idx_phi] = x * x + y * y * y;
+        phi[idx_phi] = phi_ref(x, y);
 
         if (j == 0) {
             x = 0.5 * (xij + xip1j);
             y = 0.5 * (yij + yip1j);
-            phi_bc_bot[i] = x * x + y * y * y;
+            phi_bc_bot[i] = phi_ref(x, y);
         } else if ( j == (ny - 1)) {
             x = 0.5 * (xijp1 + xip1jp1);
             y = 0.5 * (yijp1 + yip1jp1);
-            phi_bc_top[i] = x * x + y * y * y;
+            phi_bc_top[i] = phi_ref(x, y);
         }
 
     }
@@ -194,10 +198,6 @@ __global__ void vector_grad_gauss(double * phi, double * grad_phi, double * grad
         // if (i == 0)
         //     printf("i %d, j %d, grad_phi_x = %e, phi_xiy_e = %e, phi_xiy_w = %e, phi_etay_n = %e, phi_etay_s = %e, Areas: (S) %e, %e, (N) %e, %e, (E) %e, %e, (W) %e, %e, Phi (I-1) %e, (I), %e, (I+1) %e, (J-1) %e, (J+1) %e\n", i, j, tmp1, phi_xiy_e, phi_xiy_w, phi_etay_n, phi_etay_s, area[idx_a], area[idx_a+1], area[idx_a+nxp*7], area[idx_a+nxp*7+1], area[idx_a+7+2], area[idx_a+7+3], area[idx_a+2], area[idx_a+3], phiim1j, phiij, phiip1j, phiijm1, phiijp1);
     }
-}
-
-__device__ __inline__ double phi_ref(double x, double y) {
-    return x * x + y * y * y;
 }
 
 // Inline device function (can be called from kernels)
