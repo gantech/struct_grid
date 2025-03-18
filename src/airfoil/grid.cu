@@ -140,7 +140,7 @@ __global__ void compute_if(double * pts, double * cell_center, double * area, in
         if ( j == 0) {
             printf("i %d, j %d - t1 = %e, x, y = (%e, %e), xu, yu = (%e, %e), xim1, yim1 = (%e, %e), xi, yi = (%e, %e) \n", i , j, t1, x, y, xu, yu, xim1, yim1, xi, yi );
         }
-        area[idx_a + 5] = t1;
+        area[idx_a + 6] = t1;
 
     if ( (j > 0) && (j < ny) ) {
         //p3
@@ -170,9 +170,9 @@ __global__ void compute_if(double * pts, double * cell_center, double * area, in
             printf( "i %d, j %d - t1 = %e, x, y = (%e, %e), xr, yr = (%e, %e), xjm1, yjm1 = (%e, %e), xj, yj = (%e, %e) \n", i , j, t1, x, y, xr, yr, xjm1, yjm1, xj, yj);
         }
 
-        area[idx_a + 6] = t1;
+        area[idx_a + 5] = t1;
     } else {
-        area[idx_a + 6] = 0.0;
+        area[idx_a + 5] = 0.0;
     }
 
     // if (j > 90) 
