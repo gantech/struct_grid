@@ -135,7 +135,7 @@ __global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, 
         jc[idx_jc+3] = jf[idx_jf1+3] + jf[idx_jf2+3];
         jc[idx_jc+4] = jf[idx_jf3+4] + jf[idx_jf4+4];
 
-        printf("i = %d, j = %d, j = %e, %e, %e, %e, %e", i, j, jc[idx_jc], jc[idx_jc+1], jc[idx_jc+2], jc[idx_jc+3], jc[idx_jc+4]);
+        printf("i = %d, j = %d, j = %e, %e, %e, %e, %e \n", i, j, jc[idx_jc], jc[idx_jc+1], jc[idx_jc+2], jc[idx_jc+3], jc[idx_jc+4]);
 
     }
 
