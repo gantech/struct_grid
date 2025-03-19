@@ -264,6 +264,8 @@ int main() {
         double tmp_resid = thrust::reduce(t_r, t_r + nx[ilevel] * ny[ilevel], 0.0, thrust::plus<double>());
         std::cout << "At level ilev = " << ilevel << ", restricted residual = " << tmp_resid << std::endl;
 
+        std::cout << "Grid = " << grid[ilevel].x << ", " << grid[ilevel].y << std::endl;
+        
         // Perform some smoothing at this level to get the error
         for (int ismooth = 0; ismooth < 10; ismooth++)
             gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
