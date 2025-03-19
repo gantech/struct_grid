@@ -7,7 +7,6 @@
 #include <thrust/device_vector.h>
 #define TILE_SIZE 32
 
-
 // Kernel function for initialization - No tiling or shared memory
 __global__ void initialize(double *T, int nx, int ny, double dx, double dy);
 
@@ -214,7 +213,7 @@ int main() {
     cudaMalloc(&T, nx_f * ny_f * sizeof(double));
     double * nlr;
     cudaMalloc(&nlr, nx_f * ny_f * sizeof(double));
-
+    thrust::device_ptr<double> t_nlr(nlr);
 
     std::vector<double*> deltaT(nlevels), J(nlevels), R(nlevels);;
     for (int i = 0; i < nlevels; i++) {
@@ -234,6 +233,8 @@ int main() {
 
     // Write 1 V-cycle of multigrid
     compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
+    double glob_resid = thrust::reduce(t_res, t_res + nx[0] * ny[0], 0.0, thrust::plus<double>());
+    std::cout << "Starting residual = " << glob_resid << std::endl;         
 
     // Compute the Jacobian matrix at the coarser levels 
     for (int ilevel = 1; ilevel < nlevels; ilevel++)
@@ -269,6 +270,15 @@ int main() {
             gauss_seidel<<<grid_size[0], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
 
     }
+
+    update<<<grid_size[0], block_size>>>(T, deltaT[0], nx[0], ny[0], dx, dy);
+
+
+    compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
+    glob_resid = thrust::reduce(t_res, t_res + nx[0] * ny[0], 0.0, thrust::plus<double>());
+    std::cout << "Ending residual = " << glob_resid << std::endl;    
+
+
 
     return 0;
 }
