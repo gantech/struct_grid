@@ -2,6 +2,8 @@
 #include <fstream>
 #include <cmath>
 #include <cuda_runtime.h>
+#include <thrust/reduce.h>
+#include <thrust/device_vector.h>
 
 #define TILE_SIZE 32
 #define TILE_SIZE_ADI 2
@@ -358,6 +360,8 @@ int main() {
     cudaMalloc(&J, nx * ny * 5 * sizeof(double));
     cudaMalloc(&R, nx * ny * sizeof(double));
 
+    thrust::device_ptr<double> t_res(R);
+
     // Grid and block size
     dim3 grid_size(ceil(nx / (double)TILE_SIZE), ceil(ny / (double)TILE_SIZE), 1);
     dim3 block_size(TILE_SIZE, TILE_SIZE, 1);
@@ -398,6 +402,9 @@ int main() {
         //adi_y<<<grid_size_adiy, block_size_adi, (5*ny*TILE_SIZE_ADI*sizeof(double))>>>(T, J, R, nx, ny);
         adi_y<<<grid_size_adiy, block_size_adi>>>(T, J, R, nx, ny);
         compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
+
+        double glob_resid = thrust::reduce(t_res, t_res + nx * ny, 0.0, thrust::plus<double>());
+        std::cout << "Iter = " << i << ", Residual = " << glob_resid << std::endl;
     }
 
     cudaDeviceSynchronize();
