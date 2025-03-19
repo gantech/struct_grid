@@ -453,7 +453,7 @@ int main() {
     std::cout << "Trying to parallel sum the residual " << std::endl;
     thrust::device_ptr<double> t_res(res);
 
-    double glob_resid = thrust::reduce(thrust::device, t_res, t_res + ntot, 0.0, thrust::plus<double>());
+    double glob_resid = thrust::reduce(t_res, t_res + ntot, 0.0, thrust::plus<double>());
     std::cout << "Global residual = " << glob_resid << std::endl;
     
     double * h_res = new double[ntot];
