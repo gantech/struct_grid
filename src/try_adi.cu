@@ -382,7 +382,7 @@ int main() {
 
 
     // Call the Jacobi iteration 1000 times
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 100000; ++i) {
     // std::cout << "Iteration: " << i << std::endl;
         jacobi_iter<<<grid_size, block_size>>>(T, deltaT, J, R, nx, ny, dx, dy, kc);
         // update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
