@@ -210,7 +210,7 @@ __global__ void jacobi_iter(double *T, double *deltaT, double *J, double *R, int
             tijp1 = deltaT[idx_r + nx];
         }
 
-        T[idx_r] += 0.1*(-R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
+        T[idx_r] += 0.9*(-R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
     }
 }
 
