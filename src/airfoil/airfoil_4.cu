@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cuda_runtime.h>
 #include <iomanip>
+#include <thrust/reduce.h>
 
 #define TILE_SIZE 16
 #define TILE_SIZE_ADI 2
@@ -448,6 +449,8 @@ int main() {
     compute_r_j<<<grid, block>>>(phi, grad_phi, jac, res, area, phi_bc_bot, phi_bc_top, cell_center, pts, nx, ny, nxp, nyp);
     cudaDeviceSynchronize();
 
+    double glob_resid = thrust::reduce(res, res + ntot, thrust::plus<double>());
+    std::cout << "Global residual = " << glob_resid << std::endl;
     
     double * h_res = new double[ntot];
     cudaMemcpy(h_res, res, ntot * sizeof(double), cudaMemcpyDeviceToHost);
