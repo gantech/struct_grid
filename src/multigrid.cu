@@ -94,13 +94,13 @@ __global__ void prolongate_error(double * deltaTc, double * deltaTf, int nxc, in
     int jc = blockIdx.y * blockDim.y + threadIdx.y;
 
     // Each cell in the coarse mesh (ic, jc) is a sum of the 4 cells corresponding to (2 * ic, 2 * jc), (2 * ic + 1, 2 * jc), (2 * ic, 2 * jc + 1), (2 * ic + 1, 2 * jc + 1)
-    int idx_rc = (jc * nxc) + i;
+    int idx_rc = (jc * nxc) + ic;
     int idx_rf1 = (2 * jc * nxf) + (2 * ic);
     int idx_rf2 = (2 * jc * nxf) + (2 * ic + 1);
     int idx_rf3 = (2 * (jc + 1) * nxf) + (2 * ic);
     int idx_rf4 = (2 * (jc + 1) * nxf) + (2 * ic + 1);
 
-    if ( (i < nxc) && (j < nyc) ) {
+    if ( (ic < nxc) && (jc < nyc) ) {
 
         deltaTf[idx_rf1] += deltaTc[idx_rc];
         deltaTf[idx_rf2] += deltaTc[idx_rc];
@@ -165,18 +165,18 @@ __global__ void gauss_seidel(double *deltaT, double *J, double *R, int nx, int n
         double tijp1 = 0.0;
         double tijm1 = 0.0;
 
-        if (row == 0) {
+        if (i == 0) {
             tip1j = deltaT[idx_r + 1];
-        } else if (row == (nx - 1)) {
+        } else if (i == (nx - 1)) {
             tim1j = deltaT[idx_r - 1];
         } else {
             tip1j = deltaT[idx_r + 1];
             tim1j = deltaT[idx_r - 1];
         }
 
-        if (col == 0) {
+        if (j == 0) {
             tijp1 = deltaT[idx_r + nx];
-        } else if (col == (ny - 1)) {
+        } else if (j == (ny - 1)) {
             tijm1 = deltaT[idx_r - nx];
         } else {
             tijm1 = deltaT[idx_r - nx];
@@ -197,6 +197,8 @@ int main() {
     // Need resolution only on the finest grid to assemble the equations
     double dx = 1.0 / double(nx_f);
     double dy = 3.0 / double(ny_f);
+
+    double kc = 0.001;
 
     // Number of levels in multigrid - each refined in all directions by a factor of 2
     int nlevels = 4; 
@@ -225,16 +227,13 @@ int main() {
     std::vector<dim3> grid_size;
     for (int ilevel = 0; ilevel < nlevels; ilevel++) 
         grid_size.push_back(dim3(ceil(nx[ilevel] / (double)TILE_SIZE), ceil(ny[ilevel] / (double)TILE_SIZE), 1));
-    
     // Keep block size same for all grids for now
     dim3 block_size(TILE_SIZE, TILE_SIZE, 1);
-    std::cout << "Grid size: " << grid_size.x << ", " << grid_size.y << std::endl;
-    std::cout << "Block size: " << block_size.x << ", " << block_size.y << std::endl;
 
     initialize<<<grid_size[0], block_size>>>(T, nx[0], ny[0], dx, dy);
 
     // Write 1 V-cycle of multigrid
-    compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy);
+    compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
 
     // Compute the Jacobian matrix at the coarser levels 
     for (int ilevel = 1; ilevel < nlevels; ilevel++)
@@ -242,7 +241,7 @@ int main() {
     
     // Do some smoothing on the finest level first
     for (int ismooth = 0; ismooth < 10; ismooth++)
-        gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr[0], nx[0], ny[0]);
+        gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, nx[0], ny[0]);
 
     // Compute the residual of the linear system of equations at this level
     compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, R[0], nx[0], ny[0]);
