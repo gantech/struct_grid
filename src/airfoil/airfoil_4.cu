@@ -449,7 +449,7 @@ int main() {
     cudaDeviceSynchronize();
 
     std::cout << "Trying to parallel sum the residual " << std::endl;
-    double glob_resid = thrust::reduce(res, res + ntot, 0.0, thrust::plus<double>());
+    double glob_resid = thrust::reduce(thrust::device, res, res + ntot, 0.0, thrust::plus<double>());
     std::cout << "Global residual = " << glob_resid << std::endl;
     
     double * h_res = new double[ntot];
