@@ -384,8 +384,10 @@ int main() {
     // Call the Jacobi iteration 1000 times
     for (int i = 0; i < 100000; ++i) {
     // std::cout << "Iteration: " << i << std::endl;
-        jacobi_iter<<<grid_size, block_size>>>(T, deltaT, J, R, nx, ny, dx, dy, kc);
-        update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
+        for (int j = 0; j < 10; ++j) {
+            jacobi_iter<<<grid_size, block_size>>>(T, deltaT, J, R, nx, ny, dx, dy, kc);
+            update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
+        }
         compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
 
         double glob_resid = thrust::reduce(t_res, t_res + nx * ny, 0.0, thrust::plus<double>());
