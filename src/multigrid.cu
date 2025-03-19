@@ -254,7 +254,7 @@ int main() {
 
         // Perform some smoothing at this level to get the error
         for (int ismooth = 0; ismooth < 10; ismooth++)
-            gauss_seidel<<<grid_size[0], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+            gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
 
         // Compute the residual of the linear system of equations at this level. Overwrite the R vector
         compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
@@ -267,7 +267,7 @@ int main() {
 
         // Do some more smoothing at this level to reduce the error
         for (int ismooth = 0; ismooth < 10; ismooth++)
-            gauss_seidel<<<grid_size[0], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+            gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
 
     }
 
