@@ -233,7 +233,7 @@ int main() {
 
     // Write 1 V-cycle of multigrid
     compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
-    double glob_resid = thrust::reduce(t_res, t_res + nx[0] * ny[0], 0.0, thrust::plus<double>());
+    double glob_resid = thrust::reduce(t_nlr, t_nlr + nx[0] * ny[0], 0.0, thrust::plus<double>());
     std::cout << "Starting residual = " << glob_resid << std::endl;         
 
     // Compute the Jacobian matrix at the coarser levels 
