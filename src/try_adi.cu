@@ -182,35 +182,36 @@ __global__ void jacobi_iter(double *T, double *deltaT, double *J, double *R, int
         int idx_j = idx_r * 5;
 
         double jij = J[idx_j];
-        double jim1j = J[idx_j + 1];
-        double jip1j = J[idx_j + 2];
-        double jijm1 = J[idx_j + 3];
-        double jijp1 = J[idx_j + 4];
+        // double jim1j = J[idx_j + 1];
+        // double jip1j = J[idx_j + 2];
+        // double jijm1 = J[idx_j + 3];
+        // double jijp1 = J[idx_j + 4];
 
-        double tip1j = 0.0;
-        double tim1j = 0.0;
-        double tijp1 = 0.0;
-        double tijm1 = 0.0;
+        // double tip1j = 0.0;
+        // double tim1j = 0.0;
+        // double tijp1 = 0.0;
+        // double tijm1 = 0.0;
 
-        if (row == 0) {
-            tip1j = deltaT[idx_r + 1];
-        } else if (row == (nx - 1)) {
-            tim1j = deltaT[idx_r - 1];
-        } else {
-            tip1j = deltaT[idx_r + 1];
-            tim1j = deltaT[idx_r - 1];
-        }
+        // if (row == 0) {
+        //     tip1j = deltaT[idx_r + 1];
+        // } else if (row == (nx - 1)) {
+        //     tim1j = deltaT[idx_r - 1];
+        // } else {
+        //     tip1j = deltaT[idx_r + 1];
+        //     tim1j = deltaT[idx_r - 1];
+        // }
 
-        if (col == 0) {
-            tijp1 = deltaT[idx_r + nx];
-        } else if (col == (ny - 1)) {
-            tijm1 = deltaT[idx_r - nx];
-        } else {
-            tijm1 = deltaT[idx_r - nx];
-            tijp1 = deltaT[idx_r + nx];
-        }
+        // if (col == 0) {
+        //     tijp1 = deltaT[idx_r + nx];
+        // } else if (col == (ny - 1)) {
+        //     tijm1 = deltaT[idx_r - nx];
+        // } else {
+        //     tijm1 = deltaT[idx_r - nx];
+        //     tijp1 = deltaT[idx_r + nx];
+        // }
 
-        T[idx_r] += 0.9*(-R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
+        // T[idx_r] += 0.9*(-R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
+        T[idx_r] -= 0.9 * (R[idx_r])/jij;
     }
 }
 
