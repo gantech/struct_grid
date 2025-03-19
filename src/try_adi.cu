@@ -381,31 +381,34 @@ int main() {
     cudaEventRecord(start,0);
 
 
-    // // Call the Jacobi iteration 1000 times
-    // for (int i = 0; i < 100000; ++i) {
-    // // std::cout << "Iteration: " << i << std::endl;
-    //     jacobi_iter<<<grid_size, block_size>>>(T, deltaT, J, R, nx, ny, dx, dy, kc);
-    //     //update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
-    //     //compute_r<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);   
-    // }
-    // update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
+    // Call the Jacobi iteration 1000 times
+    for (int i = 0; i < 100000; ++i) {
+    // std::cout << "Iteration: " << i << std::endl;
+        jacobi_iter<<<grid_size, block_size>>>(T, deltaT, J, R, nx, ny, dx, dy, kc);
+        update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
+        compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
+
+        double glob_resid = thrust::reduce(t_res, t_res + nx * ny, 0.0, thrust::plus<double>());
+        std::cout << "Iter = " << i << ", Residual = " << glob_resid << std::endl;        
+    }
+    update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
 
     dim3 grid_size_adix(ceil(ny / (double)TILE_SIZE_ADI), 1, 1);
     dim3 block_size_adi(TILE_SIZE_ADI, 1,1);
     dim3 grid_size_adiy(ceil(nx / (double)TILE_SIZE_ADI), 1, 1);
 
-    for (int i = 0; i < 10000; i++) {
-        //adi_x<<<grid_size_adix, block_size_adi, (5*nx*TILE_SIZE_ADI*sizeof(double))>>>(T, J, R, nx, ny);
-        adi_x<<<grid_size_adix, block_size_adi>>>(T, J, R, nx, ny);
-        compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
+    // for (int i = 0; i < 10000; i++) {
+    //     //adi_x<<<grid_size_adix, block_size_adi, (5*nx*TILE_SIZE_ADI*sizeof(double))>>>(T, J, R, nx, ny);
+    //     adi_x<<<grid_size_adix, block_size_adi>>>(T, J, R, nx, ny);
+    //     compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
 
-        //adi_y<<<grid_size_adiy, block_size_adi, (5*ny*TILE_SIZE_ADI*sizeof(double))>>>(T, J, R, nx, ny);
-        adi_y<<<grid_size_adiy, block_size_adi>>>(T, J, R, nx, ny);
-        compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
+    //     //adi_y<<<grid_size_adiy, block_size_adi, (5*ny*TILE_SIZE_ADI*sizeof(double))>>>(T, J, R, nx, ny);
+    //     adi_y<<<grid_size_adiy, block_size_adi>>>(T, J, R, nx, ny);
+    //     compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
 
-        double glob_resid = thrust::reduce(t_res, t_res + nx * ny, 0.0, thrust::plus<double>());
-        std::cout << "Iter = " << i << ", Residual = " << glob_resid << std::endl;
-    }
+    //     double glob_resid = thrust::reduce(t_res, t_res + nx * ny, 0.0, thrust::plus<double>());
+    //     std::cout << "Iter = " << i << ", Residual = " << glob_resid << std::endl;
+    // }
 
     cudaDeviceSynchronize();
 
