@@ -6,5 +6,6 @@ add_executable(adi_cuda try_adi.cu)
 set_target_properties(adi_cuda PROPERTIES
     CUDA_ARCHITECTURES "90"
 )
+install(TARGETS adi_cuda DESTINATION bin)
 
 add_subdirectory(airfoil)
