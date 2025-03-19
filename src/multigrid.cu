@@ -275,7 +275,7 @@ int main() {
 
 
     compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
-    glob_resid = thrust::reduce(t_res, t_res + nx[0] * ny[0], 0.0, thrust::plus<double>());
+    glob_resid = thrust::reduce(t_nlr, t_nlr + nx[0] * ny[0], 0.0, thrust::plus<double>());
     std::cout << "Ending residual = " << glob_resid << std::endl;    
 
 
