@@ -127,16 +127,15 @@ __global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, 
 
     if ( (i < nxc) && (j < nyc) ) {
 
-        jc[idx_jc] = jf[idx_jf1] + jf[idx_jf2] + jf[idx_jf3] + jf[idx_jf4]  // Diagonals of the 4 cells
-                    + jf[idx_jf1+2] + jf[idx_jf1+4] 
-                    + jf[idx_jf2+1] + jf[idx_jf2+4]
-                    + jf[idx_jf3+3] + jf[idx_jf3+2]
-                    + jf[idx_jf4+4] + jf[idx_jf4+3]; // Interlinks of the 4 cells
+        jc[idx_jc] = jf[idx_jf1] + jf[idx_jf2] + jf[idx_jf3] + jf[idx_jf4] + jf[idx_jf1+2] + jf[idx_jf1+4] + jf[idx_jf2+1] + jf[idx_jf2+4] + jf[idx_jf3+3] + jf[idx_jf3+2] + jf[idx_jf4+4] + jf[idx_jf4+3]; 
+        // Diagonals and Interlinks of the 4 cells
         
         jc[idx_jc+1] = jf[idx_jf1+1] + jf[idx_jf3+1];
         jc[idx_jc+2] = jf[idx_jf2+2] + jf[idx_jf4+2];
         jc[idx_jc+3] = jf[idx_jf1+3] + jf[idx_jf2+3];
         jc[idx_jc+4] = jf[idx_jf3+4] + jf[idx_jf4+4];
+
+        printf("i = %d, j = %d, j = %e, %e, %e, %e, %e", i, j, jc[idx_jc], jc[idx_jc+1], jc[idx_jc+2], jc[idx_jc+3], jc[idx_jc+4]);
 
     }
 
@@ -239,7 +238,6 @@ int main() {
     // Compute the Jacobian matrix at the coarser levels 
     for (int ilevel = 1; ilevel < nlevels; ilevel++)
         restrict_j<<<grid_size[ilevel], block_size>>>(J[ilevel], J[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
-    
 
     // Downstroke of V-cycle
     
