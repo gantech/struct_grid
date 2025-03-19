@@ -312,7 +312,7 @@ __global__ void compute_r_j(double * phi, double * grad_phi, double *jac, double
             rFx = 0.5 * (pts[i * NDIM] + pts[(i+1)*NDIM]);
             rFy = 0.5 * (pts[i * NDIM + 1] + pts[ (i+1)*NDIM + 1]);
             dCF = mag(rFx-rCx, rFy-rCy);
-            
+
             loc_res += (phi_bc_bot[i]-phi[idx_phi])*mag(area[idx_a], area[idx_a+1])/dCF;
             jac_c -= mag(area[idx_a], area[idx_a+1])/dCF;
         }
@@ -448,6 +448,7 @@ int main() {
     compute_r_j<<<grid, block>>>(phi, grad_phi, jac, res, area, phi_bc_bot, phi_bc_top, cell_center, pts, nx, ny, nxp, nyp);
     cudaDeviceSynchronize();
 
+    std::cout << "Trying to parallel sum the residual " << std::endl;
     double glob_resid = thrust::reduce(res, res + ntot, 0.0, thrust::plus<double>());
     std::cout << "Global residual = " << glob_resid << std::endl;
     
