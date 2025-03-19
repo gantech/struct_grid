@@ -5,6 +5,7 @@
 #include <cuda_runtime.h>
 #include <thrust/reduce.h>
 #include <thrust/device_vector.h>
+#define TILE_SIZE 32
 
 
 // Kernel function for initialization - No tiling or shared memory
@@ -68,28 +69,26 @@ __global__ void compute_lin_resid(double * deltaT, double * J, double * rhs, dou
 
 // Restrict residual by one level. Expected that nxc = nxf/2 and nyc = nyf/2
 // Expected to run on a grid and block that represents the coarse mesh
-__global__ restrict_resid(double * rc, double * rf, int nxc, int nyc, int nxf, int nyf) {
+__global__ void restrict_resid(double * rc, double * rf, int nxc, int nyc, int nxf, int nyf) {
 
     int ic = blockIdx.x * blockDim.x + threadIdx.x;
     int jc = blockIdx.y * blockDim.y + threadIdx.y;
 
     // Each cell in the coarse mesh (ic, jc) is a sum of the 4 cells corresponding to (2 * ic, 2 * jc), (2 * ic + 1, 2 * jc), (2 * ic, 2 * jc + 1), (2 * ic + 1, 2 * jc + 1)
-    int idx_rc = (jc * nxc) + i;
+    int idx_rc = (jc * nxc) + ic;
     int idx_rf1 = (2 * jc * nxf) + (2 * ic);
     int idx_rf2 = (2 * jc * nxf) + (2 * ic + 1);
     int idx_rf3 = (2 * (jc + 1) * nxf) + (2 * ic);
     int idx_rf4 = (2 * (jc + 1) * nxf) + (2 * ic + 1);
 
-    if ( (i < nxc) && (j < nyc) ) {
-
+    if ( (ic < nxc) && (jc < nyc) )
         rc[idx_rc] = rf[idx_rf1] + rf[idx_rf2] + rf[idx_rf3] + rf[idx_rf4];
-        
-    }
+
 }
 
 // Prolongate error by one level. Expected that nxc = nxf/2 and nyc = nyf/2
 // Expected to run on a grid and block that represents the coarse mesh
-__global__ prolongate_error(double * deltaTc, deltaTf, int nxc, int nyc, int nxf, int nyf) {
+__global__ void prolongate_error(double * deltaTc, double * deltaTf, int nxc, int nyc, int nxf, int nyf) {
 
     int ic = blockIdx.x * blockDim.x + threadIdx.x;
     int jc = blockIdx.y * blockDim.y + threadIdx.y;
@@ -223,9 +222,9 @@ int main() {
     }
 
     // Grid and block size
-    dim3 grid_size(ceil(nx[0] / (double)TILE_SIZE), ceil(ny[0] / (double)TILE_SIZE), 1);
+    std::vector<dim3> grid_size;
     for (int ilevel = 0; ilevel < nlevels; ilevel++) 
-        grid_size.push_back((ceil(nx[ilevel] / (double)TILE_SIZE), ceil(ny[ilevel] / (double)TILE_SIZE), 1));
+        grid_size.push_back(dim3(ceil(nx[ilevel] / (double)TILE_SIZE), ceil(ny[ilevel] / (double)TILE_SIZE), 1));
     
     // Keep block size same for all grids for now
     dim3 block_size(TILE_SIZE, TILE_SIZE, 1);
