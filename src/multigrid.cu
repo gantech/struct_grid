@@ -127,7 +127,7 @@ __global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, 
 
     if ( (i < nxc) && (j < nyc) ) {
 
-        jc[idx_jc] = jf[idx_jf1] + jf[idx_jf2] + jf[idx_jf3] + jf[idx_jf4] + jf[idx_jf1+2] + jf[idx_jf1+4] + jf[idx_jf2+1] + jf[idx_jf2+4] + jf[idx_jf3+3] + jf[idx_jf3+2] + jf[idx_jf4+4] + jf[idx_jf4+3]; 
+        jc[idx_jc] = jf[idx_jf1] + jf[idx_jf2] + jf[idx_jf3] + jf[idx_jf4] + jf[idx_jf1+2] + jf[idx_jf1+4] + jf[idx_jf2+1] + jf[idx_jf2+4] + jf[idx_jf3+3] + jf[idx_jf3+2] + jf[idx_jf4+1] + jf[idx_jf4+3]; 
         // Diagonals and Interlinks of the 4 cells
         
         jc[idx_jc+1] = jf[idx_jf1+1] + jf[idx_jf3+1];
@@ -135,7 +135,7 @@ __global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, 
         jc[idx_jc+3] = jf[idx_jf1+3] + jf[idx_jf2+3];
         jc[idx_jc+4] = jf[idx_jf3+4] + jf[idx_jf4+4];
 
-        printf("i = %d, j = %d, j = %e, %e, %e, %e, %e \n", i, j, jc[idx_jc], jc[idx_jc+1], jc[idx_jc+2], jc[idx_jc+3], jc[idx_jc+4]);
+        printf("nxc = %d, nyc = %d, i = %d, j = %d, j = %e, %e, %e, %e, %e \n", nxc, nyc, i, j, jc[idx_jc], jc[idx_jc+1], jc[idx_jc+2], jc[idx_jc+3], jc[idx_jc+4]);
 
     }
 
@@ -181,7 +181,7 @@ __global__ void gauss_seidel(double *deltaT, double *J, double *R, int nx, int n
             tijp1 = deltaT[idx_r + nx];
         }
 
-        deltaT[idx_r] = 0.9*(R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
+        deltaT[idx_r] = 0.5*(R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
     }
 }
 
