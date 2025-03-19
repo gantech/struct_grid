@@ -386,7 +386,7 @@ int main() {
     // std::cout << "Iteration: " << i << std::endl;
         jacobi_iter<<<grid_size, block_size>>>(T, deltaT, J, R, nx, ny, dx, dy, kc);
         // update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
-        compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
+        compute_r<<<grid_size, block_size>>>(T, R, nx, ny, dx, dy, kc);
 
         double glob_resid = thrust::reduce(t_res, t_res + nx * ny, 0.0, thrust::plus<double>());
         std::cout << "Iter = " << i << ", Residual = " << glob_resid << std::endl;        
