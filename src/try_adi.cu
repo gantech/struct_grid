@@ -210,7 +210,7 @@ __global__ void jacobi_iter(double *T, double *deltaT, double *J, double *R, int
             tijp1 = deltaT[idx_r + nx];
         }
 
-        deltaT[idx_r] = (-R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
+        deltaT[idx_r] = 10.0*(-R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
     }
 }
 
@@ -382,12 +382,10 @@ int main() {
 
 
     // Call the Jacobi iteration 1000 times
-    for (int i = 0; i < 100000; ++i) {
+    for (int i = 0; i < 100; ++i) {
     // std::cout << "Iteration: " << i << std::endl;
-        for (int j = 0; j < 10; ++j) {
-            jacobi_iter<<<grid_size, block_size>>>(T, deltaT, J, R, nx, ny, dx, dy, kc);
-            update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
-        }
+        jacobi_iter<<<grid_size, block_size>>>(T, deltaT, J, R, nx, ny, dx, dy, kc);
+        update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
         compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
 
         double glob_resid = thrust::reduce(t_res, t_res + nx * ny, 0.0, thrust::plus<double>());
