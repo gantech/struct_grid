@@ -19,6 +19,17 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
 // Kernel function for calculation of Residual - No tiling or shared memory
 __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, double dx, double dy, double kc) ;
 
+// Kernel function to initialize a given field to zero
+__global__ void initialize_zero(double * T, int nx, int ny) {
+
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
+
+    int idx = (j * nx) + i;
+
+    if ( (i < nx) && (j < ny))
+        T[idx] = 0.0;
+}
 
 // Kernel to compute linear residual of the linear system of equations J * deltaT = rhs. 
 // Write linear residual to new array R. If you want the rhs overwritten, pass the same pointers for rhs and R
@@ -238,6 +249,11 @@ int main() {
     // Compute the Jacobian matrix at the coarser levels 
     for (int ilevel = 1; ilevel < nlevels; ilevel++)
         restrict_j<<<grid_size[ilevel], block_size>>>(J[ilevel], J[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
+    
+    // Initialize deltaT at all levels to zero
+    for (int ilevel = 0; ilevel < nlevels; ilevel++)
+        initialize_zero<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], nx[ilevel], ny[ilevel]);
+    
 
     // Downstroke of V-cycle
     
