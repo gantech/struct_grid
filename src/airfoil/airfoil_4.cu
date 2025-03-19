@@ -4,6 +4,8 @@
 #include <cuda_runtime.h>
 #include <iomanip>
 #include <thrust/reduce.h>
+#include <thrust/device_vector.h>
+
 
 #define TILE_SIZE 16
 #define TILE_SIZE_ADI 2
@@ -449,7 +451,9 @@ int main() {
     cudaDeviceSynchronize();
 
     std::cout << "Trying to parallel sum the residual " << std::endl;
-    double glob_resid = thrust::reduce(thrust::device, res, res + ntot, 0.0, thrust::plus<double>());
+    thrust::device_ptr<double> t_res(res);
+
+    double glob_resid = thrust::reduce(thrust::device, t_res, t_res + ntot, 0.0, thrust::plus<double>());
     std::cout << "Global residual = " << glob_resid << std::endl;
     
     double * h_res = new double[ntot];
