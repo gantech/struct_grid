@@ -114,7 +114,7 @@ __global__ void prolongate_error(double * deltaTc, double * deltaTf, int nxc, in
 
 // Create Jacobian matrix at the coarser level by using the finer level. Expected that nxc = nxf/2 and nyc = nyf/2
 // Expected to run on a grid and block that represents the coarse mesh
-__global__ void restrict_J(double * jc, double * jf, int nxc, int nyc, int nxf, int nyf)  {
+__global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, int nyf)  {
 
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
