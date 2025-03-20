@@ -245,11 +245,12 @@ int main() {
     cudaMalloc(&nlr, nx_f * ny_f * sizeof(double));
     thrust::device_ptr<double> t_nlr(nlr);
 
-    std::vector<double*> deltaT(nlevels), J(nlevels), R(nlevels);;
+    std::vector<double*> deltaT(nlevels), J(nlevels), R(nlevels), Rlin(nlevels);
     for (int i = 0; i < nlevels; i++) {
         cudaMalloc(&deltaT[i], nx[i] * ny[i] * sizeof(double));
         cudaMalloc(&J[i], nx[i] * ny[i] * 5 * sizeof(double));
         cudaMalloc(&R[i], nx[i] * ny[i] * sizeof(double));
+        cudaMalloc(&Rlin[i], nx[i] * ny[i] * sizeof(double));
     }
 
     // Grid and block size
@@ -296,7 +297,7 @@ int main() {
 
     for (int ilevel = 1; ilevel < nlevels; ilevel++) {
         // Restrict the residual of the linear system
-        restrict_resid<<<grid_size[ilevel], block_size>>>(R[ilevel], R[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
+        restrict_resid<<<grid_size[ilevel], block_size>>>(R[ilevel], Rlin[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
         thrust::device_ptr<double> t_r(R[ilevel]);
         double tmp_resid = thrust::transform_reduce(t_r, t_r + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>());
         std::cout << "At level ilev = " << ilevel << ", restricted residual = " << tmp_resid << std::endl;
@@ -307,8 +308,8 @@ int main() {
         for (int ismooth = 0; ismooth < 10; ismooth++)
             gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
 
-        // Compute the residual of the linear system of equations at this level. Overwrite the R vector
-        compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+        // Compute the residual of the linear system of equations at this level.
+        compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
         tmp_resid = thrust::transform_reduce(t_r, t_r + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>());
         std::cout << "At level ilev = " << ilevel << ", residual after smoothing = " << tmp_resid << std::endl;
 
