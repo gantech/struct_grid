@@ -264,56 +264,58 @@ int main() {
     // Downstroke of V-cycle
     
     // Do some smoothing on the finest level first
-    for (int ismooth = 0; ismooth < 10; ismooth++)
+    for (int ismooth = 0; ismooth < 10; ismooth++) {
+        std::cout << "ismooth = " << ismooth << std::endl;
         gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, nx[0], ny[0]);
-
-    {
-    // Compute the residual of the linear system of equations at this level
-    compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, R[0], nx[0], ny[0]);
-
-    thrust::device_ptr<double> t_r(R[0]);
-    glob_resid = thrust::reduce(t_r, t_r + nx[0] * ny[0], 0.0, thrust::plus<double>());
-    std::cout << "Finest level linear residual after smoothing = " << glob_resid << std::endl;          
-
     }
 
-    for (int ilevel = 1; ilevel < nlevels; ilevel++) {
-        // Restrict the residual of the linear system
-        restrict_resid<<<grid_size[ilevel], block_size>>>(R[ilevel], R[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
-        thrust::device_ptr<double> t_r(R[ilevel]);
-        double tmp_resid = thrust::reduce(t_r, t_r + nx[ilevel] * ny[ilevel], 0.0, thrust::plus<double>());
-        std::cout << "At level ilev = " << ilevel << ", restricted residual = " << tmp_resid << std::endl;
+    // {
+    // // Compute the residual of the linear system of equations at this level
+    // compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, R[0], nx[0], ny[0]);
 
-        std::cout << "Grid = " << grid_size[ilevel].x << ", " << grid_size[ilevel].y << std::endl;
+    // thrust::device_ptr<double> t_r(R[0]);
+    // glob_resid = thrust::reduce(t_r, t_r + nx[0] * ny[0], 0.0, thrust::plus<double>());
+    // std::cout << "Finest level linear residual after smoothing = " << glob_resid << std::endl;          
+
+    // }
+
+    // for (int ilevel = 1; ilevel < nlevels; ilevel++) {
+    //     // Restrict the residual of the linear system
+    //     restrict_resid<<<grid_size[ilevel], block_size>>>(R[ilevel], R[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
+    //     thrust::device_ptr<double> t_r(R[ilevel]);
+    //     double tmp_resid = thrust::reduce(t_r, t_r + nx[ilevel] * ny[ilevel], 0.0, thrust::plus<double>());
+    //     std::cout << "At level ilev = " << ilevel << ", restricted residual = " << tmp_resid << std::endl;
+
+    //     std::cout << "Grid = " << grid_size[ilevel].x << ", " << grid_size[ilevel].y << std::endl;
         
-        // Perform some smoothing at this level to get the error
-        for (int ismooth = 0; ismooth < 10; ismooth++)
-            gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+    //     // Perform some smoothing at this level to get the error
+    //     for (int ismooth = 0; ismooth < 10; ismooth++)
+    //         gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
 
-        // Compute the residual of the linear system of equations at this level. Overwrite the R vector
-        compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
-        tmp_resid = thrust::reduce(t_r, t_r + nx[ilevel] * ny[ilevel], 0.0, thrust::plus<double>());
-        std::cout << "At level ilev = " << ilevel << ", residual after smoothing = " << tmp_resid << std::endl;
+    //     // Compute the residual of the linear system of equations at this level. Overwrite the R vector
+    //     compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+    //     tmp_resid = thrust::reduce(t_r, t_r + nx[ilevel] * ny[ilevel], 0.0, thrust::plus<double>());
+    //     std::cout << "At level ilev = " << ilevel << ", residual after smoothing = " << tmp_resid << std::endl;
 
-    }
+    // }
 
-    // Upstroke of V-cycle - This should end on the finest level (ilevel = 0)
-    for (int ilevel = nlevels - 2; ilevel > -1; ilevel--) {
-        // Prolongate the error
-        prolongate_error<<<grid_size[ilevel], block_size>>>(deltaT[ilevel+1], deltaT[ilevel], nx[ilevel+1], ny[ilevel+1], nx[ilevel], ny[ilevel]);
+    // // Upstroke of V-cycle - This should end on the finest level (ilevel = 0)
+    // for (int ilevel = nlevels - 2; ilevel > -1; ilevel--) {
+    //     // Prolongate the error
+    //     prolongate_error<<<grid_size[ilevel], block_size>>>(deltaT[ilevel+1], deltaT[ilevel], nx[ilevel+1], ny[ilevel+1], nx[ilevel], ny[ilevel]);
 
-        // Do some more smoothing at this level to reduce the error
-        for (int ismooth = 0; ismooth < 10; ismooth++)
-            gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+    //     // Do some more smoothing at this level to reduce the error
+    //     for (int ismooth = 0; ismooth < 10; ismooth++)
+    //         gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
 
-    }
+    // }
 
-    update<<<grid_size[0], block_size>>>(T, deltaT[0], nx[0], ny[0], dx, dy);
+    // update<<<grid_size[0], block_size>>>(T, deltaT[0], nx[0], ny[0], dx, dy);
 
 
-    compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
-    glob_resid = thrust::reduce(t_nlr, t_nlr + nx[0] * ny[0], 0.0, thrust::plus<double>());
-    std::cout << "Ending residual = " << glob_resid << std::endl;    
+    // compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
+    // glob_resid = thrust::reduce(t_nlr, t_nlr + nx[0] * ny[0], 0.0, thrust::plus<double>());
+    // std::cout << "Ending residual = " << glob_resid << std::endl;    
 
 
 
