@@ -280,6 +280,11 @@ int main() {
     std::cout << "Loop = " << iloop << std::endl;
     
     // Downstroke of V-cycle
+
+    // Initialize deltaT at all levels to zero
+    for (int ilevel = 0; ilevel < nlevels; ilevel++)
+        initialize_zero<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], nx[ilevel], ny[ilevel]);
+        
     
     // Do some smoothing on the finest level first
     for (int ismooth = 0; ismooth < 10; ismooth++) {
