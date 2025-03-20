@@ -73,6 +73,10 @@ __global__ void compute_lin_resid(double * deltaT, double * J, double * rhs, dou
         }
 
         // Write to residual
+
+        if (std::abs(jij) < 1e-5) {
+            printf("nx = %d, ny = %d, i = %d, j = %d, R = %e, jim1j = %e, jip1j = %e, jijm1 = %e, jijp1 = %e, jij = %e \n", nx, ny, i, j, R[idx_r], jim1j, jip1j, jijm1, jijp1, jij);
+        }
         R[idx_r] = rhs[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1 - jij * deltaT[idx_r];
     }
 }
@@ -146,7 +150,7 @@ __global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, 
         jc[idx_jc+3] = jf[idx_jf1+3] + jf[idx_jf2+3];
         jc[idx_jc+4] = jf[idx_jf3+4] + jf[idx_jf4+4];
 
-        printf("nxc = %d, nyc = %d, i = %d, j = %d, j = %e, %e, %e, %e, %e \n", nxc, nyc, i, j, jc[idx_jc], jc[idx_jc+1], jc[idx_jc+2], jc[idx_jc+3], jc[idx_jc+4]);
+        // printf("nxc = %d, nyc = %d, i = %d, j = %d, j = %e, %e, %e, %e, %e \n", nxc, nyc, i, j, jc[idx_jc], jc[idx_jc+1], jc[idx_jc+2], jc[idx_jc+3], jc[idx_jc+4]);
 
     }
 
@@ -261,24 +265,28 @@ int main() {
     for (int ilevel = 0; ilevel < nlevels; ilevel++)
         initialize_zero<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], nx[ilevel], ny[ilevel]);
     
-
-    // Downstroke of V-cycle
-    
-    // Do some smoothing on the finest level first
-    for (int ismooth = 0; ismooth < 1; ismooth++) {
-        std::cout << "ismooth = " << ismooth << std::endl;
-        gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, nx[0], ny[0]);
-    }
-
-    {
     // Compute the residual of the linear system of equations at this level
     compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, R[0], nx[0], ny[0]);
 
-    thrust::device_ptr<double> t_r(R[0]);
-    glob_resid = thrust::reduce(t_r, t_r + nx[0] * ny[0], 0.0, thrust::plus<double>());
-    std::cout << "Finest level linear residual after smoothing = " << glob_resid << std::endl;          
 
-    }
+
+    // // Downstroke of V-cycle
+    
+    // // Do some smoothing on the finest level first
+    // for (int ismooth = 0; ismooth < 1; ismooth++) {
+    //     std::cout << "ismooth = " << ismooth << std::endl;
+    //     gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, nx[0], ny[0]);
+    // }
+
+    // {
+    // // Compute the residual of the linear system of equations at this level
+    // compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, R[0], nx[0], ny[0]);
+
+    // thrust::device_ptr<double> t_r(R[0]);
+    // glob_resid = thrust::reduce(t_r, t_r + nx[0] * ny[0], 0.0, thrust::plus<double>());
+    // std::cout << "Finest level linear residual after smoothing = " << glob_resid << std::endl;          
+
+    // }
 
     // for (int ilevel = 1; ilevel < nlevels; ilevel++) {
     //     // Restrict the residual of the linear system
