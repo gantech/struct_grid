@@ -2,7 +2,7 @@
 #include <fstream>
 #include <cmath>
 #include <cuda_runtime.h>
-#include <thrust/reduce.h>
+#include <thrust/transform_reduce.h>
 #include <thrust/device_vector.h>
 
 #define TILE_SIZE 32
@@ -21,6 +21,13 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
 
 // Kernel function for calculation of Residual - No tiling or shared memory
 __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, double dx, double dy, double kc) ;
+
+// Functor to square the elements
+struct square {
+    __device__ double operator()(double a) {
+        return a * a;
+    }
+};
 
 // Kernel function for calculation of Residual - No tiling or shared memory
 __global__ void jacobi_iter(double *T, double *deltaT, double *J, double *R, int nx, int ny, double dx, double dy, double kc) {
@@ -241,7 +248,7 @@ int main() {
         // update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
         compute_r<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
 
-        double glob_resid = thrust::reduce(t_res, t_res + nx * ny, 0.0, thrust::plus<double>());
+        double glob_resid = std::sqrt(thrust::transform_reduce(t_res, t_res + nx * ny, square(), 0.0, thrust::plus<double>()));
         std::cout << "Iter = " << i << ", Residual = " << glob_resid << std::endl;        
     }
     update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
