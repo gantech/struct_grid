@@ -270,11 +270,7 @@ int main() {
     // Compute the Jacobian matrix at the coarser levels 
     for (int ilevel = 1; ilevel < nlevels; ilevel++)
         restrict_j<<<grid_size[ilevel], block_size>>>(J[ilevel], J[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
-    
-    // Initialize deltaT at all levels to zero
-    for (int ilevel = 0; ilevel < nlevels; ilevel++)
-        initialize_zero<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], nx[ilevel], ny[ilevel]);
-    
+
 
     for (int iloop = 0; iloop < 100; iloop++) {
     std::cout << "Loop = " << iloop << std::endl;
