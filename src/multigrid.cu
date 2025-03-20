@@ -229,7 +229,7 @@ int main() {
     double kc = 0.001;
 
     // Number of levels in multigrid - each refined in all directions by a factor of 2
-    int nlevels = 2; 
+    int nlevels = 4; 
     std::vector<int> nx(nlevels);
     std::vector<int> ny(nlevels);
     for (int i = 0; i < nlevels; i++) {
@@ -283,7 +283,6 @@ int main() {
     
     // Do some smoothing on the finest level first
     for (int ismooth = 0; ismooth < 10; ismooth++) {
-        std::cout << "ismooth = " << ismooth << std::endl;
         gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, nx[0], ny[0]);
     }
 
@@ -315,23 +314,22 @@ int main() {
 
     }
 
-    // // Upstroke of V-cycle - This should end on the finest level (ilevel = 0)
-    // for (int ilevel = nlevels - 2; ilevel > -1; ilevel--) {
-    //     // Prolongate the error
-    //     prolongate_error<<<grid_size[ilevel], block_size>>>(deltaT[ilevel+1], deltaT[ilevel], nx[ilevel+1], ny[ilevel+1], nx[ilevel], ny[ilevel]);
+    // Upstroke of V-cycle - This should end on the finest level (ilevel = 0)
+    for (int ilevel = nlevels - 2; ilevel > -1; ilevel--) {
+        // Prolongate the error
+        prolongate_error<<<grid_size[ilevel], block_size>>>(deltaT[ilevel+1], deltaT[ilevel], nx[ilevel+1], ny[ilevel+1], nx[ilevel], ny[ilevel]);
 
-    //     // Do some more smoothing at this level to reduce the error
-    //     for (int ismooth = 0; ismooth < 10; ismooth++)
-    //         gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+        // Do some more smoothing at this level to reduce the error
+        for (int ismooth = 0; ismooth < 10; ismooth++)
+            gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
 
-    // }
+    }
 
-    // update<<<grid_size[0], block_size>>>(T, deltaT[0], nx[0], ny[0], dx, dy);
+    update<<<grid_size[0], block_size>>>(T, deltaT[0], nx[0], ny[0], dx, dy);
 
-
-    // compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
-    // glob_resid = thrust::reduce(t_nlr, t_nlr + nx[0] * ny[0], 0.0, thrust::plus<double>());
-    // std::cout << "Ending residual = " << glob_resid << std::endl;    
+    compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
+    glob_resid = thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>());
+    std::cout << "Ending residual = " << glob_resid << std::endl;    
 
 
 
