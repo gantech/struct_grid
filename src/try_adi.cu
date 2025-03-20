@@ -140,12 +140,12 @@ int main() {
 
     for (int i = 0; i < 10000; i++) {
         //adi_x<<<grid_size_adix, block_size_adi, (5*nx*TILE_SIZE_ADI*sizeof(double))>>>(T, J, R, nx, ny);
-        adi_x<<<grid_size_adix, block_size_adi>>>(T, J, R, nx, ny);
+        adi_x<<<grid_size_adix, block_size_adi>>>(deltaT, J, R, nx, ny);
         update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
         compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
 
         //adi_y<<<grid_size_adiy, block_size_adi, (5*ny*TILE_SIZE_ADI*sizeof(double))>>>(T, J, R, nx, ny);
-        adi_y<<<grid_size_adiy, block_size_adi>>>(T, J, R, nx, ny);
+        adi_y<<<grid_size_adiy, block_size_adi>>>(deltaT, J, R, nx, ny);
         update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
         compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
 
