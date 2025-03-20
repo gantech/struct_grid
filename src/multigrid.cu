@@ -207,7 +207,7 @@ __global__ void gauss_seidel(double *deltaT, double *J, double *R, int nx, int n
 
         deltaT[idx_r] = 0.5*(R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
 
-        if (std::abs(jij) < 1e-5)
+        if (std::abs(jij) < 1e-8)
             printf("nx = %d, ny = %d, i = %d, j = %d, deltaT = %e, R = %e, jim1j = %e, jip1j = %e, jijm1 = %e, jijp1 = %e, jij = %e \n", nx, ny, i, j, deltaT[idx_r], R[idx_r], jim1j, jip1j, jijm1, jijp1, jij);
 
 
@@ -219,8 +219,8 @@ __global__ void gauss_seidel(double *deltaT, double *J, double *R, int nx, int n
 int main() {
 
     // Finest level problem size
-    int nx_f = 128*8;
-    int ny_f = 384*8;
+    int nx_f = 128*16;
+    int ny_f = 384*16;
 
     // Need resolution only on the finest grid to assemble the equations
     double dx = 1.0 / double(nx_f);
