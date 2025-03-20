@@ -257,9 +257,9 @@ int main() {
     double glob_resid = thrust::reduce(t_nlr, t_nlr + nx[0] * ny[0], 0.0, thrust::plus<double>());
     std::cout << "Starting residual = " << glob_resid << std::endl;         
 
-    // // Compute the Jacobian matrix at the coarser levels 
-    // for (int ilevel = 1; ilevel < nlevels; ilevel++)
-    //     restrict_j<<<grid_size[ilevel], block_size>>>(J[ilevel], J[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
+    // Compute the Jacobian matrix at the coarser levels 
+    for (int ilevel = 1; ilevel < nlevels; ilevel++)
+        restrict_j<<<grid_size[ilevel], block_size>>>(J[ilevel], J[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
     
     // Initialize deltaT at all levels to zero
     for (int ilevel = 0; ilevel < nlevels; ilevel++)
