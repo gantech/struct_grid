@@ -19,6 +19,13 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
 // Kernel function for calculation of Residual - No tiling or shared memory
 __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, double dx, double dy, double kc) ;
 
+// Functor to square the elements
+struct square {
+    __device__ double operator()(double a) {
+        return a * a;
+    }
+};
+
 // Kernel function to initialize a given field to zero
 __global__ void initialize_zero(double * T, int nx, int ny) {
 
@@ -254,7 +261,7 @@ int main() {
 
     // Write 1 V-cycle of multigrid
     compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
-    double glob_resid = thrust::reduce(t_nlr, t_nlr + nx[0] * ny[0], 0.0, thrust::plus<double>(), [] __device__ (double a) { return a * a; });
+    double glob_resid = thrust::reduce(t_nlr, t_nlr + nx[0] * ny[0], 0.0, thrust::plus<double>(), square());
     std::cout << "Starting residual = " << glob_resid << std::endl;         
 
     // Compute the Jacobian matrix at the coarser levels 
@@ -290,7 +297,7 @@ int main() {
         // Restrict the residual of the linear system
         restrict_resid<<<grid_size[ilevel], block_size>>>(R[ilevel], R[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
         thrust::device_ptr<double> t_r(R[ilevel]);
-        double tmp_resid = thrust::reduce(t_r, t_r + nx[ilevel] * ny[ilevel], 0.0, thrust::plus<double>(), [] __device__ (double a) { return a * a; });
+        double tmp_resid = thrust::reduce(t_r, t_r + nx[ilevel] * ny[ilevel], 0.0, thrust::plus<double>(), square());
         std::cout << "At level ilev = " << ilevel << ", restricted residual = " << tmp_resid << std::endl;
 
         std::cout << "Grid = " << grid_size[ilevel].x << ", " << grid_size[ilevel].y << std::endl;
@@ -301,7 +308,7 @@ int main() {
 
         // Compute the residual of the linear system of equations at this level. Overwrite the R vector
         compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
-        tmp_resid = thrust::reduce(t_r, t_r + nx[ilevel] * ny[ilevel], 0.0, thrust::plus<double>(), [] __device__ (double a) { return a * a; });
+        tmp_resid = thrust::reduce(t_r, t_r + nx[ilevel] * ny[ilevel], 0.0, thrust::plus<double>(), square());
         std::cout << "At level ilev = " << ilevel << ", residual after smoothing = " << tmp_resid << std::endl;
 
     }
