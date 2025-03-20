@@ -229,7 +229,7 @@ int main() {
     double kc = 0.001;
 
     // Number of levels in multigrid - each refined in all directions by a factor of 2
-    int nlevels = 4; 
+    int nlevels = 5; 
     std::vector<int> nx(nlevels);
     std::vector<int> ny(nlevels);
     for (int i = 0; i < nlevels; i++) {
@@ -276,7 +276,7 @@ int main() {
         initialize_zero<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], nx[ilevel], ny[ilevel]);
     
 
-    for (int iloop = 0; iloop < 10; iloop++) {
+    for (int iloop = 0; iloop < 100; iloop++) {
     std::cout << "Loop = " << iloop << std::endl;
     
     // Downstroke of V-cycle
