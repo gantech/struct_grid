@@ -239,7 +239,7 @@ int main() {
     std::vector<double*> deltaT(nlevels), J(nlevels), R(nlevels);;
     for (int i = 0; i < nlevels; i++) {
         cudaMalloc(&deltaT[i], nx[i] * ny[i] * sizeof(double));
-        cudaMalloc(&J[i], nx[i] * ny[i] * sizeof(double));
+        cudaMalloc(&J[i], nx[i] * ny[i] * 5 * sizeof(double));
         cudaMalloc(&R[i], nx[i] * ny[i] * sizeof(double));
     }
 
