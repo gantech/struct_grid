@@ -273,7 +273,7 @@ int main() {
     // // Downstroke of V-cycle
     
     // Do some smoothing on the finest level first
-    for (int ismooth = 0; ismooth < 1; ismooth++) {
+    for (int ismooth = 0; ismooth < 10; ismooth++) {
         std::cout << "ismooth = " << ismooth << std::endl;
         gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, nx[0], ny[0]);
     }
