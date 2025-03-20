@@ -266,7 +266,7 @@ int main() {
         adi_y<<<grid_size_adiy, block_size_adi>>>(T, J, R, nx, ny);
         compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
 
-        double glob_resid = thrust::reduce(t_res, t_res + nx * ny, 0.0, thrust::plus<double>());
+        double glob_resid = std::sqrt(thrust::transform_reduce(t_res, t_res + nx * ny, square(), 0.0, thrust::plus<double>()));
         std::cout << "Iter = " << i << ", Residual = " << glob_resid << std::endl;
     }
 
