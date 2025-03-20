@@ -229,7 +229,7 @@ int main() {
     double kc = 0.001;
 
     // Number of levels in multigrid - each refined in all directions by a factor of 2
-    int nlevels = 0; 
+    int nlevels = 8; 
     std::vector<int> nx(nlevels);
     std::vector<int> ny(nlevels);
     for (int i = 0; i < nlevels; i++) {
