@@ -4,6 +4,7 @@
 #include <vector>
 #include <cuda_runtime.h>
 #include <thrust/reduce.h>
+#include <thrust/transform_reduce.h>
 #include <thrust/functional.h>
 #include <thrust/device_vector.h>
 #define TILE_SIZE 32
