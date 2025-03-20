@@ -262,7 +262,7 @@ int main() {
 
     // Write 1 V-cycle of multigrid
     compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
-    double glob_resid = thrust::reduce(t_nlr, t_nlr + nx[0] * ny[0], 0.0, thrust::plus<double>(), square());
+    double glob_resid = thrust::reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>());
     std::cout << "Starting residual = " << glob_resid << std::endl;         
 
     // Compute the Jacobian matrix at the coarser levels 
@@ -298,7 +298,7 @@ int main() {
         // Restrict the residual of the linear system
         restrict_resid<<<grid_size[ilevel], block_size>>>(R[ilevel], R[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
         thrust::device_ptr<double> t_r(R[ilevel]);
-        double tmp_resid = thrust::reduce(t_r, t_r + nx[ilevel] * ny[ilevel], 0.0, thrust::plus<double>(), square());
+        double tmp_resid = thrust::reduce(t_r, t_r + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>());
         std::cout << "At level ilev = " << ilevel << ", restricted residual = " << tmp_resid << std::endl;
 
         std::cout << "Grid = " << grid_size[ilevel].x << ", " << grid_size[ilevel].y << std::endl;
@@ -309,7 +309,7 @@ int main() {
 
         // Compute the residual of the linear system of equations at this level. Overwrite the R vector
         compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
-        tmp_resid = thrust::reduce(t_r, t_r + nx[ilevel] * ny[ilevel], 0.0, thrust::plus<double>(), square());
+        tmp_resid = thrust::reduce(t_r, t_r + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>());
         std::cout << "At level ilev = " << ilevel << ", residual after smoothing = " << tmp_resid << std::endl;
 
     }
