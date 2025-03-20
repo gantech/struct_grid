@@ -216,12 +216,13 @@ int main() {
     double kc = 0.001;
 
     // Number of levels in multigrid - each refined in all directions by a factor of 2
-    int nlevels = 4; 
+    int nlevels = 2; 
     std::vector<int> nx(nlevels);
     std::vector<int> ny(nlevels);
     for (int i = 0; i < nlevels; i++) {
         nx[i] = nx_f / (1 << i);
         ny[i] = ny_f / (1 << i);
+        std::cout << "ilevel = " << i << ", nx = " << nx[i] << ", ny = " << ny[i] << std::endl;
     }
 
     // Fields for temperature and non-linear residual are required only at the finest level
