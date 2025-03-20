@@ -194,8 +194,11 @@ __global__ void gauss_seidel(double *deltaT, double *J, double *R, int nx, int n
 
         deltaT[idx_r] = 0.5*(R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
 
-        if (std::isinf(deltaT[idx_r]) || std::isnan(deltaT[idx_r]))
+        if (std::abs(jij) < 1e-5)
             printf("i = %d, j = %d, deltaT = %e, R = %e, jim1j = %e, jip1j = %e, jijm1 = %e, jijp1 = %e, jij = %e \n", i, j, deltaT[idx_r], R[idx_r], jim1j, jip1j, jijm1, jijp1, jij);
+
+
+        // if (std::isinf(deltaT[idx_r]) || std::isnan(deltaT[idx_r]))
     }
 }
 
