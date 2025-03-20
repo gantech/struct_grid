@@ -93,7 +93,7 @@ __global__ void adi_x(double *T, double *J, double *R, int nx, int ny) {
             a[i] = J[idx_j + 1];
             b[i] = J[idx_j];
             c[i] = J[idx_j + 2];
-            d[i] = -R[idx_r];
+            d[i] = R[idx_r];
 
             // if (col == 0) {
             //     printf("Row, Col, idx_r is %d, %d, %d - a %e, b %e, c %e, d %e\n", i, col, idx_r, a[i], b[i], c[i], d[i]);
@@ -163,7 +163,7 @@ __global__ void adi_y(double *T, double *J, double *R, int nx, int ny) {
             a[j] = J[idx_j + 3];
             b[j] = J[idx_j];
             c[j] = J[idx_j + 4];
-            d[j] = -R[idx_r];
+            d[j] = R[idx_r];
         }
     }
 
