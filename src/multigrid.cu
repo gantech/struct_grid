@@ -264,7 +264,7 @@ int main() {
 
     // Write 1 V-cycle of multigrid
     compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
-    double glob_resid = thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>());
+    double glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
     std::cout << "Starting residual = " << glob_resid << std::endl;         
 
     // Compute the Jacobian matrix at the coarser levels 
@@ -292,14 +292,14 @@ int main() {
     compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, R[0], nx[0], ny[0]);
 
     thrust::device_ptr<double> t_r0(R[0]);
-    glob_resid = thrust::transform_reduce(t_r0, t_r0 + nx[0] * ny[0], square(), 0.0, thrust::plus<double>());
+    glob_resid = std::sqrt(thrust::transform_reduce(t_r0, t_r0 + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
     std::cout << "Finest level linear residual after smoothing = " << glob_resid << std::endl;
 
     for (int ilevel = 1; ilevel < nlevels; ilevel++) {
         // Restrict the residual of the linear system
         restrict_resid<<<grid_size[ilevel], block_size>>>(R[ilevel], Rlin[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
         thrust::device_ptr<double> t_r(R[ilevel]);
-        double tmp_resid = thrust::transform_reduce(t_r, t_r + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>());
+        double tmp_resid = std::sqrt(thrust::transform_reduce(t_r, t_r + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
         std::cout << "At level ilev = " << ilevel << ", restricted residual = " << tmp_resid << std::endl;
 
         std::cout << "Grid = " << grid_size[ilevel].x << ", " << grid_size[ilevel].y << std::endl;
@@ -310,7 +310,7 @@ int main() {
 
         // Compute the residual of the linear system of equations at this level.
         compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
-        tmp_resid = thrust::transform_reduce(t_r, t_r + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>());
+        tmp_resid = std::sqrt(thrust::transform_reduce(t_r, t_r + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
         std::cout << "At level ilev = " << ilevel << ", residual after smoothing = " << tmp_resid << std::endl;
 
     }
@@ -329,7 +329,7 @@ int main() {
     update<<<grid_size[0], block_size>>>(T, deltaT[0], nx[0], ny[0], dx, dy);
 
     compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
-    glob_resid = thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>());
+    glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
     std::cout << "Ending residual = " << glob_resid << std::endl;    
 
 
