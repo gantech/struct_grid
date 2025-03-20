@@ -275,19 +275,17 @@ int main() {
     for (int ilevel = 0; ilevel < nlevels; ilevel++)
         initialize_zero<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], nx[ilevel], ny[ilevel]);
     
-    // Compute the residual of the linear system of equations at this level
-    compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, R[0], nx[0], ny[0]);
 
-
-
-    // // Downstroke of V-cycle
+    for (int iloop = 0; iloop < 10; iloop++) {
+    std::cout << "Loop = " << iloop << std::endl;
+    
+    // Downstroke of V-cycle
     
     // Do some smoothing on the finest level first
     for (int ismooth = 0; ismooth < 10; ismooth++) {
         gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, nx[0], ny[0]);
     }
 
-    
     // // Compute the residual of the linear system of equations at this level
     compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, R[0], nx[0], ny[0]);
 
@@ -331,6 +329,8 @@ int main() {
     compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
     glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
     std::cout << "Ending residual = " << glob_resid << std::endl;    
+
+    }
 
 
 
