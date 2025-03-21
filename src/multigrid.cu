@@ -113,7 +113,7 @@ __global__ void restrict_resid(double * rc, double * rf, int nxc, int nyc, int n
     int idx_rf4 = (2 * (jc + 1) * nxf) + (2 * ic + 1);
 
     if ( (ic < nxc) && (jc < nyc) )
-        rc[idx_rc] = (rf[idx_rf1] + rf[idx_rf2] + rf[idx_rf3] + rf[idx_rf4])/std::sqrt(2.0d);
+        rc[idx_rc] = (rf[idx_rf1] + rf[idx_rf2] + rf[idx_rf3] + rf[idx_rf4])/std::sqrt(2.0);
 
 }
 
@@ -134,10 +134,10 @@ __global__ void prolongate_error(double * deltaTc, double * deltaTf, int nxc, in
     if ( (ic < nxc) && (jc < nyc) ) {
 
         // printf("Prolongating (i,j) = %d, %d, deltaT = %e \n", ic, jc, deltaTc[idx_rc]);
-        deltaTf[idx_rf1] += deltaTc[idx_rc]/std::sqrt(2.0d);
-        deltaTf[idx_rf2] += deltaTc[idx_rc]/std::sqrt(2.0d);
-        deltaTf[idx_rf3] += deltaTc[idx_rc]/std::sqrt(2.0d);
-        deltaTf[idx_rf4] += deltaTc[idx_rc]/std::sqrt(2.0d);
+        deltaTf[idx_rf1] += deltaTc[idx_rc]/std::sqrt(2.0);
+        deltaTf[idx_rf2] += deltaTc[idx_rc]/std::sqrt(2.0);
+        deltaTf[idx_rf3] += deltaTc[idx_rc]/std::sqrt(2.0);
+        deltaTf[idx_rf4] += deltaTc[idx_rc]/std::sqrt(2.0);
         
     }    
 
