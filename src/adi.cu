@@ -18,22 +18,36 @@ __global__ void adi_x(double *T, double *J, double *R, int nx, int ny) {
     double * d = c + nx;
     double * x = d + nx;
 
-    if (col < ny) {
-
+    if (col == 0) {
         for (int i=0; i < nx; i++) {
-
             int idx_r = (col * nx) + i;
             int idx_j = idx_r * 5;
     
             a[i] = J[idx_j + 1];
             b[i] = J[idx_j];
             c[i] = J[idx_j + 2];
-            d[i] = R[idx_r];
-
-            // if (col == 0) {
-            //     printf("Row, Col, idx_r is %d, %d, %d - a %e, b %e, c %e, d %e\n", i, col, idx_r, a[i], b[i], c[i], d[i]);
-            // }
+            d[i] = R[idx_r] - T[idx_r+nx] * J[idx_j + 4];
         }
+    } else if (col == (ny-1)) {
+        for (int i=0; i < nx; i++) {
+            int idx_r = (col * nx) + i;
+            int idx_j = idx_r * 5;
+    
+            a[i] = J[idx_j + 1];
+            b[i] = J[idx_j];
+            c[i] = J[idx_j + 2];
+            d[i] = R[idx_r] - T[idx_r-nx] * J[idx_j + 3];
+        }
+    } else if (col < ny) {
+        for (int i=0; i < nx; i++) {
+            int idx_r = (col * nx) + i;
+            int idx_j = idx_r * 5;
+    
+            a[i] = J[idx_j + 1];
+            b[i] = J[idx_j];
+            c[i] = J[idx_j + 2];
+            d[i] = R[idx_r] - T[idx-nx] * J[idx_j + 3] - T[idx_r+nx] * J[idx_j + 4];
+        }        
     }
 
     __syncthreads();
@@ -88,17 +102,35 @@ __global__ void adi_y(double *T, double *J, double *R, int nx, int ny) {
     double * d = c + ny;
     double * x = d + ny;
 
-    if (row < nx) {
-
+    if (row == 0) {
         for (int j=0; j < ny; j++) {
-
             int idx_r = (j * nx) + row;
             int idx_j = idx_r * 5;
     
             a[j] = J[idx_j + 3];
             b[j] = J[idx_j];
             c[j] = J[idx_j + 4];
-            d[j] = R[idx_r];
+            d[j] = R[idx_r] - T[idx_r+nx] * J[idx_j + 2];
+        }
+    } else if (row == (nx-1)) {
+        for (int j=0; j < ny; j++) {
+            int idx_r = (j * nx) + row;
+            int idx_j = idx_r * 5;
+    
+            a[j] = J[idx_j + 3];
+            b[j] = J[idx_j];
+            c[j] = J[idx_j + 4];
+            d[j] = R[idx_r] - T[idx_rx-1] * J[idx_j + 1];
+        }
+    } else if (row < nx) {
+        for (int j=0; j < ny; j++) {
+            int idx_r = (j * nx) + row;
+            int idx_j = idx_r * 5;
+    
+            a[j] = J[idx_j + 3];
+            b[j] = J[idx_j];
+            c[j] = J[idx_j + 4];
+            d[j] = R[idx_r] - T[idx_rx-1] * J[idx_j + 1] - T[idx_r+nx] * J[idx_j + 2];
         }
     }
 
