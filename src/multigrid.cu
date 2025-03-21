@@ -302,8 +302,10 @@ int main() {
     compute_r_j<<<grid_size[1], block_size>>>(T2, J[1], R[1], nx[1], ny[1], 2.0 * dx, 2.0 * dy, kc);
  
     // Compute the Jacobian matrix at the coarser levels 
-    for (int ilevel = 1; ilevel < nlevels; ilevel++)
+    for (int ilevel = 1; ilevel < nlevels; ilevel++) {
+        std::cout << "Restricting J from ilevel = " << ilevel - 1 << " to ilevel = " << ilevel << std::endl;
         restrict_j<<<grid_size[ilevel], block_size>>>(J[ilevel], J[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
+    }
 
 
     // for (int iloop = 0; iloop < 10; iloop++) {
