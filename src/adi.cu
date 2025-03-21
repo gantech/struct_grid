@@ -45,7 +45,7 @@ __global__ void adi_x(double *T, double *J, double *R, int nx, int ny) {
             a[i] = J[idx_j + 1];
             b[i] = J[idx_j];
             c[i] = J[idx_j + 2];
-            d[i] = R[idx_r] - T[idx-nx] * J[idx_j + 3] - T[idx_r+nx] * J[idx_j + 4];
+            d[i] = R[idx_r] - T[idx_r-nx] * J[idx_j + 3] - T[idx_r+nx] * J[idx_j + 4];
         }        
     }
 
@@ -109,7 +109,7 @@ __global__ void adi_y(double *T, double *J, double *R, int nx, int ny) {
             a[j] = J[idx_j + 3];
             b[j] = J[idx_j];
             c[j] = J[idx_j + 4];
-            d[j] = R[idx_r] - T[idx_r+nx] * J[idx_j + 2];
+            d[j] = R[idx_r] - T[idx_r+1] * J[idx_j + 2];
         }
     } else if (row == (nx-1)) {
         for (int j=0; j < ny; j++) {
@@ -119,7 +119,7 @@ __global__ void adi_y(double *T, double *J, double *R, int nx, int ny) {
             a[j] = J[idx_j + 3];
             b[j] = J[idx_j];
             c[j] = J[idx_j + 4];
-            d[j] = R[idx_r] - T[idx_rx-1] * J[idx_j + 1];
+            d[j] = R[idx_r] - T[idx_r-1] * J[idx_j + 1];
         }
     } else if (row < nx) {
         for (int j=0; j < ny; j++) {
@@ -129,7 +129,7 @@ __global__ void adi_y(double *T, double *J, double *R, int nx, int ny) {
             a[j] = J[idx_j + 3];
             b[j] = J[idx_j];
             c[j] = J[idx_j + 4];
-            d[j] = R[idx_r] - T[idx_rx-1] * J[idx_j + 1] - T[idx_r+nx] * J[idx_j + 2];
+            d[j] = R[idx_r] - T[idx_r-1] * J[idx_j + 1] - T[idx_r+1] * J[idx_j + 2];
         }
     }
 
