@@ -319,6 +319,19 @@ int main() {
     }
 
 
+    double * h_Jc = new double(nx[nlevels-1] * ny[nlevels-1] * 5);
+    cudaMemcpy(h_Jc, J[nlevels-1], nx[nlevels-1] * ny[nlevels-1] * 5 * sizeof(double), cudaMemcpyDeviceToHost);
+
+    std::ofstream myfile;
+    myfile.open("Jcoarse.txt");
+    for (int j = 0; j < ny[nlevels-1]; j++) {
+        for (int i = 0; i < nx[nlevels-1]; i++) {
+            int idx_j = (j * nx[nlevels-1]) + i;
+            myfile << "i,j = " << i <<  " " << j << " " << h_Jc[idx_j] << " " << h_Jc[idx_j + 1] << " " << h_Jc[idx_j + 2] << " " << h_Jc[idx_j + 3] << " " << h_Jc[idx_j + 4] << std::endl;
+        }
+    }
+    myfile.close();
+
     for (int iloop = 0; iloop < 80; iloop++) {
     std::cout << "Loop = " << iloop << std::endl;
     
