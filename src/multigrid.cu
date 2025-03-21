@@ -340,6 +340,7 @@ int main() {
     for (int ilevel = nlevels - 2; ilevel > -1; ilevel--) {
         // Prolongate the error
         std::cout << "Prolongating error at ilevel = " << ilevel << ", ilevel + 1 = " << ilevel + 1 << std::endl;
+        std::cout << "Grid Size = " << grid_size[ilevel+1].x << ", " << grid_size[ilevel+1].y << std::endl;
         prolongate_error<<<grid_size[ilevel+1], block_size>>>(deltaT[ilevel+1], deltaT[ilevel], nx[ilevel+1], ny[ilevel+1], nx[ilevel], ny[ilevel]);
 
         // Do some more smoothing at this level to reduce the error
