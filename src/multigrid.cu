@@ -161,7 +161,7 @@ __global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, 
     if ( (i < nxc) && (j < nyc) ) {
 
         // Diagonals and Interlinks of the 4 cells
-        double j0 = 0.5*jf[idx_jf1] + jf[idx_jf2] + jf[idx_jf3] + jf[idx_jf4]    + jf[idx_jf1+2] + jf[idx_jf1+4]    + jf[idx_jf2+1] + jf[idx_jf2+4]    + jf[idx_jf3+3] + jf[idx_jf3+2]    + jf[idx_jf4+1] + jf[idx_jf4+3]);
+        double j0 = 0.5*(jf[idx_jf1] + jf[idx_jf2] + jf[idx_jf3] + jf[idx_jf4]    + jf[idx_jf1+2] + jf[idx_jf1+4]    + jf[idx_jf2+1] + jf[idx_jf2+4]    + jf[idx_jf3+3] + jf[idx_jf3+2]    + jf[idx_jf4+1] + jf[idx_jf4+3]);
         double j1 = 0.5*(jf[idx_jf1+1] + jf[idx_jf3+1]);
         double j2 = 0.5*(jf[idx_jf2+2] + jf[idx_jf4+2]);
         double j3 = 0.5*(jf[idx_jf1+3] + jf[idx_jf2+3]);
