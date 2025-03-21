@@ -315,8 +315,8 @@ int main() {
 
         // Compute the residual of the linear system of equations at this level.
         compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
-        // tmp_resid = std::sqrt(thrust::transform_reduce(t_r, t_r + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
-        // std::cout << "At level ilev = " << ilevel << ", residual after smoothing = " << tmp_resid << std::endl;
+        tmp_resid = std::sqrt(thrust::transform_reduce(t_r, t_r + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
+        std::cout << "At level ilev = " << ilevel << ", residual after smoothing = " << tmp_resid << std::endl;
 
     }
      // Restrict the residual of the linear system to coarsest level
@@ -331,9 +331,9 @@ int main() {
         adi_x<<<grid_size_adix, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
         adi_y<<<grid_size_adiy, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
         compute_lin_resid<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], Rlin[nlevels-1], nx[nlevels-1], ny[nlevels-1]);        
-        thrust::device_ptr<double> t_linr(Rlin[nlevels-1]);
-        double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[nlevels-1] * ny[nlevels-1], square(), 0.0, thrust::plus<double>()));
-        std::cout << "At coarsest level ismooth = " << ismooth << ", residual after smoothing = " << tmp_resid << std::endl;
+        // thrust::device_ptr<double> t_linr(Rlin[nlevels-1]);
+        // double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[nlevels-1] * ny[nlevels-1], square(), 0.0, thrust::plus<double>()));
+        // std::cout << "At coarsest level ismooth = " << ismooth << ", residual after smoothing = " << tmp_resid << std::endl;
     }
 
     // Upstroke of V-cycle - This should end on the finest level (ilevel = 0)
@@ -346,6 +346,11 @@ int main() {
         // Do some more smoothing at this level to reduce the error
         for (int ismooth = 0; ismooth < 10; ismooth++)
             gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+
+        compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
+        thrust::device_ptr<double> t_linr(Rlin[ilevel]);
+        double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[ilevels] * ny[ilevels], square(), 0.0, thrust::plus<double>()));
+        std::cout << "At coarsest level ismooth = " << ismooth << ", residual after smoothing = " << tmp_resid << std::endl;            
 
     }
 
