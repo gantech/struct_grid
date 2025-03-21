@@ -352,7 +352,7 @@ int main() {
         compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
         thrust::device_ptr<double> t_linr(Rlin[ilevel]);
         double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
-        std::cout << "At level ilevel = " << ilevel << ", residual after smoothing in upstroke = " << tmp_resid << std::endl;
+        std::cout << "At level ilev = " << ilevel << ", residual after smoothing in upstroke = " << tmp_resid << std::endl;
 
     }
 
