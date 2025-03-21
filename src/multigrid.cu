@@ -256,8 +256,8 @@ __global__ void gauss_seidel(double *deltaT, double *J, double *R, int nx, int n
 int main() {
 
     // Finest level problem size
-    int nx_f = 128;
-    int ny_f = 384;
+    int nx_f = 128*8;
+    int ny_f = 384*8;
 
     // Need resolution only on the finest grid to assemble the equations
     double dx = 1.0 / double(nx_f);
@@ -266,7 +266,7 @@ int main() {
     double kc = 0.01;
 
     // Number of levels in multigrid - each refined in all directions by a factor of 2
-    int nlevels = 4; 
+    int nlevels = 8; 
     std::vector<int> nx(nlevels);
     std::vector<int> ny(nlevels);
     for (int i = 0; i < nlevels; i++) {
