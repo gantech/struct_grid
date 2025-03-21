@@ -59,10 +59,12 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
             double t_bc_left = 300.0 + (y*y*y/27.0);
             radd += kc * 8.0 * t_bc_left / 3.0 ;
         } else if (row == (nx - 1)) {
-            jij += 1.0;
+            jij -= 2.0;
+            jim1j += 0.3333333333333333;
             jip1j -= 1.0;
             tim1j = T[idx_r - 1];
-            radd += 2.0 * kc * dy;
+            double t_bc_right = 300.0 + 1.0 + (y*y*y/27.0);
+            radd += kc * 8.0 * t_bc_right / 3.0;
         } else {
             tip1j = T[idx_r + 1];
             tim1j = T[idx_r - 1];
@@ -76,10 +78,12 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
             double t_bc_bot = 300.0 + (x*x);
             radd += kc * 8.0 * t_bc_bot / 3.0;
         } else if (col == (ny - 1)) {
-            jij += 1.0;
+            jij -= 2.0;
+            jim1j += 0.3333333333333333;
             jijp1 -= 1.0;
             tijm1 = T[idx_r - nx];
-            radd += kc * dx;
+            double t_bc_top = 300.0 + 1.0 + (x*x);
+            radd += kc * 8.0 * t_bc_top / 3.0;
         } else {
             tijm1 = T[idx_r - nx];
             tijp1 = T[idx_r + nx];
@@ -134,7 +138,8 @@ __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, doub
             radd += kc * 8.0 * t_bc_left / 3.0 ;
         } else if (row == (nx - 1)) {
             tim1j = T[idx_r - 1];
-            radd += 2.0 * kc * dy;
+            double t_bc_right = 300.0 + 1.0 + (y*y*y/27.0);
+            radd += kc * 8.0 * t_bc_right / 3.0;
         } else {
             tip1j = T[idx_r + 1];
             tim1j = T[idx_r - 1];
@@ -144,9 +149,10 @@ __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, doub
             tijp1 = T[idx_r + nx];
             double t_bc_bot = 300.0 + (x*x);
             radd += kc * 8.0 * t_bc_bot / 3.0;
-        } else if (col == (ny - 1)) {
+        } else if (col == (ny - 1)) {            
             tijm1 = T[idx_r - nx];
-            radd += kc * dx;
+            double t_bc_top = 300.0 + 1.0 + (x*x);
+            radd += kc * 8.0 * t_bc_top / 3.0;
         } else {
             tijm1 = T[idx_r - nx];
             tijp1 = T[idx_r + nx];
