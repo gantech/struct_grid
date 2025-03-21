@@ -263,7 +263,7 @@ int main() {
     double dx = 1.0 / double(nx_f);
     double dy = 3.0 / double(ny_f);
 
-    double kc = 0.001;
+    double kc = 0.01;
 
     // Number of levels in multigrid - each refined in all directions by a factor of 2
     int nlevels = 8; 
