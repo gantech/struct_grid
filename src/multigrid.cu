@@ -280,7 +280,7 @@ int main() {
         restrict_j<<<grid_size[ilevel], block_size>>>(J[ilevel], J[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
 
 
-    for (int iloop = 0; iloop < 10; iloop++) {
+    for (int iloop = 0; iloop < 100; iloop++) {
     std::cout << "Loop = " << iloop << std::endl;
     
     // Downstroke of V-cycle
