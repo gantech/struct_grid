@@ -172,8 +172,8 @@ __global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, 
             printf("i = %d, j = %d, j1 = %e, jc1 = %e \n", i, j, j1, jc[idx_jc+1]);
         
 
-        // double j2 = jf[idx_jf2+2] + jf[idx_jf4+2];
-        if ( std::abs(j2 - jc[idx_jc+2]) > 1e-6) 
+        double j2 = jf[idx_jf2+2] + jf[idx_jf4+2];
+        //if ( std::abs(j2 - jc[idx_jc+2]) > 1e-6) 
             printf("i = %d, j = %d, j2 = %e, jc2 = %e \n", i, j, j2, jc[idx_jc+2]);
         
 
