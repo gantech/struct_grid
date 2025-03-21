@@ -166,14 +166,15 @@ __global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, 
         double j2 = jf[idx_jf2+2] + jf[idx_jf4+2];
         double j3 = jf[idx_jf1+3] + jf[idx_jf2+3];
         double j4 = jf[idx_jf3+4] + jf[idx_jf4+4];        
-
+        
+        printf("i = %d, j = %d, j0 = %e, jc0 = %e, j1 = %e, jc1 = %e, j2 = %e, jc2 = %e, j3 = %e, jc3 = %e, j4 = %e, jc4 = %e \n", i, j, j0, jc[idx_jc], j1, jc[idx_jc+1], j2, jc[idx_jc+2], j3, jc[idx_jc+3], j4, jc[idx_jc+4]);
+        
         jc[idx_jc]= j0;
         jc[idx_jc+1]= j1;
         jc[idx_jc+2]= j2;
         jc[idx_jc+3]= j3;
         jc[idx_jc+4]= j4;
         
-        printf("i = %d, j = %d, j0 = %e, jc0 = %e, j1 = %e, jc1 = %e, j2 = %e, jc2 = %e, j3 = %e, jc3 = %e, j4 = %e, jc4 = %e \n", i, j, j0, jc[idx_jc], j1, jc[idx_jc+1], j2, jc[idx_jc+2], j3, jc[idx_jc+3], j4, jc[idx_jc+4]);
 
         // if ( std::abs(j0 - 2.0 * jc[idx_jc]) > 1.0e-5) {
         //     printf("i = %d, j = %d, j0 = %e, jc0 = %e, j0f components = %e, %e, %e, %e, %e, %e, %e, %e, %e, %e, %e, %e \n", i, j, j0, jc[idx_jc], jf[idx_jf1] , jf[idx_jf2] , jf[idx_jf3] , jf[idx_jf4], jf[idx_jf1+2] , jf[idx_jf1+4] , jf[idx_jf2+1] , jf[idx_jf2+4] , jf[idx_jf3+3] , jf[idx_jf3+2] , jf[idx_jf4+1] , jf[idx_jf4+3] );
