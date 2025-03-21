@@ -315,7 +315,7 @@ int main() {
 
         // Compute the residual of the linear system of equations at this level.
         compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
-        tmp_resid = std::sqrt(thrust::transform_reduce(t_r, t_r + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
+        double tmp_resid = std::sqrt(thrust::transform_reduce(t_r, t_r + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
         std::cout << "At level ilev = " << ilevel << ", residual after smoothing = " << tmp_resid << std::endl;
 
     }
@@ -349,8 +349,8 @@ int main() {
 
         compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
         thrust::device_ptr<double> t_linr(Rlin[ilevel]);
-        double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[ilevels] * ny[ilevels], square(), 0.0, thrust::plus<double>()));
-        std::cout << "At coarsest level ismooth = " << ismooth << ", residual after smoothing = " << tmp_resid << std::endl;            
+        double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
+        std::cout << "At level ilevel = " << ilevel << ", residual after smoothing in upstroke = " << tmp_resid << std::endl;
 
     }
 
