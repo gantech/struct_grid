@@ -328,8 +328,8 @@ int main() {
     dim3 grid_size_adiy(ceil(nx[nlevels-1] / (double)TILE_SIZE_ADI), 1, 1);
 
     for (int ismooth = 0; ismooth < 100; ismooth++) {
-        adi_x<<<grid_size_adix, block_size_adi>>>(deltaT[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-        adi_y<<<grid_size_adiy, block_size_adi>>>(deltaT[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+        adi_x<<<grid_size_adix, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+        adi_y<<<grid_size_adiy, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
     }
 
     // Upstroke of V-cycle - This should end on the finest level (ilevel = 0)
