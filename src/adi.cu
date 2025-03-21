@@ -79,6 +79,7 @@ __global__ void adi_x(double *T, double *J, double *R, int nx, int ny) {
         for (int i=0; i < nx; i++) {
             int idx_r = (col * nx) + i;
             T[idx_r] = x[i];
+            printf("col = %d, i = %d, deltaT = %e", col, i, x[i]);
         }
 
     }
@@ -155,6 +156,7 @@ __global__ void adi_y(double *T, double *J, double *R, int nx, int ny) {
         for (int j=0; j < ny; j++) {
             int idx_r = (j * nx) + row;
             T[idx_r] = x[j];
+            printf("row = %d, j = %d, deltaT = %e", row, j, x[j]);
         }
 
     }
