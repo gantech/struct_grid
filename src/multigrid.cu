@@ -339,7 +339,7 @@ int main() {
     }
 
     // Upstroke of V-cycle - This should end on the finest level (ilevel = 0)
-    for (int ilevel = nlevels - 2; ilevel > -1; ilevel--) {
+    for (int ilevel = nlevels - 2; ilevel > 0; ilevel--) {
         // Prolongate the error
         std::cout << "Prolongating error at ilevel = " << ilevel << ", ilevel + 1 = " << ilevel + 1 << std::endl;
         std::cout << "Grid Size = " << grid_size[ilevel+1].x << ", " << grid_size[ilevel+1].y << std::endl;
@@ -355,6 +355,10 @@ int main() {
         std::cout << "At level ilevel = " << ilevel << ", residual after smoothing in upstroke = " << tmp_resid << std::endl;
 
     }
+
+    prolongate_error<<<grid_size[1], block_size>>>(deltaT[1], deltaT[0], nx[1], ny[1], nx[0], ny[0]);
+    for (int ismooth=0; ismooth < 10; ismooth++)
+        gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, nx[0], ny[0]);
 
     update<<<grid_size[0], block_size>>>(T, deltaT[0], nx[0], ny[0], dx, dy);
 
