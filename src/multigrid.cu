@@ -161,26 +161,12 @@ __global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, 
     if ( (i < nxc) && (j < nyc) ) {
 
         // Diagonals and Interlinks of the 4 cells
-        double j0 = jf[idx_jf1] + jf[idx_jf2] + jf[idx_jf3] + jf[idx_jf4] + jf[idx_jf1+2] + jf[idx_jf1+4] + jf[idx_jf2+1] + jf[idx_jf2+4] + jf[idx_jf3+3] + jf[idx_jf3+2] + jf[idx_jf4+1] + jf[idx_jf4+3]; 
-        // if ( std::abs(j0 - jc[idx_jc]) > 1e-6)
-        printf("i = %d, j = %d, j0 = %e, jc0 = %e \n", i, j, j0, jc[idx_jc]);
-        
-        double j1 = jf[idx_jf1+1] + jf[idx_jf3+1];
-        // if ( std::abs(j1 - jc[idx_jc+1]) > 1e-6) 
-        printf("i = %d, j = %d, j1 = %e, jc1 = %e \n", i, j, j1, jc[idx_jc+1]);
-        
+        double j0 = jf[idx_jf1] + jf[idx_jf2] + jf[idx_jf3] + jf[idx_jf4] + jf[idx_jf1+2] + jf[idx_jf1+4] + jf[idx_jf2+1] + jf[idx_jf2+4] + jf[idx_jf3+3] + jf[idx_jf3+2] + jf[idx_jf4+1] + jf[idx_jf4+3];         
+        double j1 = jf[idx_jf1+1] + jf[idx_jf3+1];       
         double j2 = jf[idx_jf2+2] + jf[idx_jf4+2];
-        // if ( std::abs(j2 - jc[idx_jc+2]) > 1e-6) 
-        printf("i = %d, j = %d, j2 = %e, jc2 = %e \n", i, j, j2, jc[idx_jc+2]);
-
         double j3 = jf[idx_jf1+3] + jf[idx_jf2+3];
-        // if ( std::abs(j3 - jc[idx_jc+3]) > 1e-6) 
-        printf("i = %d, j = %d, j3 = %e, jc3 = %e \n", i, j, j3, jc[idx_jc+3]);
-        
-        double j4 = jf[idx_jf3+4] + jf[idx_jf4+4];
-        // if ( std::abs(j4 - jc[idx_jc+4]) > 1e-6) 
-        printf("i = %d, j = %d, j4 = %e, jc4 = %e \n", i, j, j4, jc[idx_jc+4]);
-        
+        double j4 = jf[idx_jf3+4] + jf[idx_jf4+4];        
+        printf("i = %d, j = %d, j0 = %e, jc0 = %e, j1 = %e, jc1 = %e, j2 = %e, jc2 = %e, j3 = %e, jc3 = %e, j4 = %e, jc4 = %e \n", i, j, j0, jc[idx_jc], j1, jc[idx_jc+1], j2, jc[idx_jc+2], j3, jc[idx_jc+3], j4, jc[idx_jc+4]);
 
         // printf("nxc = %d, nyc = %d, i = %d, j = %d, j = %e, %e, %e, %e, %e \n", nxc, nyc, i, j, jc[idx_jc], jc[idx_jc+1], jc[idx_jc+2], jc[idx_jc+3], jc[idx_jc+4]);
 
