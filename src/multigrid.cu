@@ -306,9 +306,9 @@ int main() {
     for (int ilevel = 1; ilevel < nlevels-1; ilevel++) {
         // Restrict the residual of the linear system
         restrict_resid<<<grid_size[ilevel], block_size>>>(R[ilevel], Rlin[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
-        // thrust::device_ptr<double> t_r(R[ilevel]);
-        // double tmp_resid = std::sqrt(thrust::transform_reduce(t_r, t_r + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
-        // std::cout << "At level ilev = " << ilevel << ", restricted residual = " << tmp_resid << std::endl;
+        thrust::device_ptr<double> t_r(R[ilevel]);
+        double tmp_resid = std::sqrt(thrust::transform_reduce(t_r, t_r + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
+        std::cout << "At level ilev = " << ilevel << ", restricted residual = " << tmp_resid << std::endl;
         
         // Perform some smoothing at this level to get the error
         for (int ismooth = 0; ismooth < 10; ismooth++)
