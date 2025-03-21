@@ -133,7 +133,7 @@ __global__ void prolongate_error(double * deltaTc, double * deltaTf, int nxc, in
 
     if ( (ic < nxc) && (jc < nyc) ) {
 
-        printf("Prolongating (i,j) = %d, %d, deltaT = %e \n", ic, jc, deltaTc[idx_rc]);
+        // printf("Prolongating (i,j) = %d, %d, deltaT = %e \n", ic, jc, deltaTc[idx_rc]);
         deltaTf[idx_rf1] += deltaTc[idx_rc];
         deltaTf[idx_rf2] += deltaTc[idx_rc];
         deltaTf[idx_rf3] += deltaTc[idx_rc];
@@ -346,7 +346,7 @@ int main() {
         prolongate_error<<<grid_size[ilevel+1], block_size>>>(deltaT[ilevel+1], deltaT[ilevel], nx[ilevel+1], ny[ilevel+1], nx[ilevel], ny[ilevel]);
 
         // Do some more smoothing at this level to reduce the error
-        for (int ismooth = 0; ismooth < 10; ismooth++)
+        for (int ismooth = 0; ismooth < 1; ismooth++)
             gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
 
         compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
