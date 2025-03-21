@@ -7,7 +7,9 @@
 #include <thrust/transform_reduce.h>
 #include <thrust/functional.h>
 #include <thrust/device_vector.h>
+
 #define TILE_SIZE 32
+#define TILE_SIZE_ADI 2
 
 // Kernel function for initialization - No tiling or shared memory
 __global__ void initialize(double *T, int nx, int ny, double dx, double dy);
@@ -20,6 +22,12 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
 
 // Kernel function for calculation of Residual - No tiling or shared memory
 __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, double dx, double dy, double kc) ;
+
+// Kernel function for Thomas solves in the X direction - part of ADI 
+__global__ void adi_x(double *T, double *J, double *R, int nx, int ny);
+
+// Kernel function for Thomas solves in the Y direction - part of ADI 
+__global__ void adi_y(double *T, double *J, double *R, int nx, int ny);
 
 // Functor to square the elements
 struct square {

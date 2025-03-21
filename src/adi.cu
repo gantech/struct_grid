@@ -1,7 +1,6 @@
 #define TILE_SIZE_ADI 2
-
-#define NNX 128
-#define NNY 384
+#define NNX 8
+#define NNY 24
 
 // Kernel function for Thomas solves in the X direction - part of ADI
 __global__ void adi_x(double *T, double *J, double *R, int nx, int ny) {
