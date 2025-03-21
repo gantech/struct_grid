@@ -299,9 +299,9 @@ int main() {
     // // Compute the residual of the linear system of equations at this level
     compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, Rlin[0], nx[0], ny[0]);
 
-    // thrust::device_ptr<double> t_r0(R[0]);
-    // glob_resid = std::sqrt(thrust::transform_reduce(t_r0, t_r0 + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
-    // std::cout << "Finest level linear residual after smoothing = " << glob_resid << std::endl;
+    thrust::device_ptr<double> t_r0(Rlin[0]);
+    glob_resid = std::sqrt(thrust::transform_reduce(t_r0, t_r0 + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
+    std::cout << "Finest level linear residual after smoothing = " << glob_resid << std::endl;
 
     for (int ilevel = 1; ilevel < nlevels-1; ilevel++) {
         // Restrict the residual of the linear system
