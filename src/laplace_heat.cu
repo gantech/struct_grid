@@ -90,7 +90,7 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
         }
 
         // Write to residual
-        double tmp = kc * ( jijm1 * tijm1 + jijp1 * tijp1 + jim1j * tim1j + jip1j * tip1j + jij * T[idx_r] + (2.0 + 2.0 * y / 9.0) * dx * dy) + radd;
+        double tmp = kc * ( jijm1 * tijm1 + jijp1 * tijp1 + jim1j * tim1j + jip1j * tip1j + jij * T[idx_r] - (2.0 + 2.0 * y / 9.0) * dx * dy) + radd;
 
         // if (std::abs(tmp/(dx * dy * kc)) > 20.0) {
         //     printf("Row, Col is %d, %d - x,y = %f, %f, Residuals - %f, %f, J - (j-1) %f, (j+1) %f, (i-1) %f, (i+1) %f, (ij) %f, T - (j-1) %f, (j+1) %f, (i-1) %f, (i+1) %f, (ij) %f \n", row, col, x, y, 2.0 - 2.0 * y / 9.0, tmp / (dx * dy * kc), jijm1, jijp1, jim1j, jip1j, jij, tijm1, tijp1, tim1j, tip1j, T[idx_r]);
@@ -159,6 +159,6 @@ __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, doub
         }
 
         // Write to residual
-        R[idx_r] = -kc * ( jijm1 * tijm1 + jijp1 * tijp1 + jim1j * tim1j + jip1j * tip1j + jij * T[idx_r] + (2.0 + 2.0 * y / 9.0) * dx * dy) - radd;
+        R[idx_r] = -kc * ( jijm1 * tijm1 + jijp1 * tijp1 + jim1j * tim1j + jip1j * tip1j + jij * T[idx_r] - (2.0 + 2.0 * y / 9.0) * dx * dy) - radd;
     }
 }
