@@ -346,7 +346,7 @@ int main() {
         prolongate_error<<<grid_size[ilevel+1], block_size>>>(deltaT[ilevel+1], deltaT[ilevel], nx[ilevel+1], ny[ilevel+1], nx[ilevel], ny[ilevel]);
 
         // Do some more smoothing at this level to reduce the error
-        for (int ismooth = 0; ismooth < 1; ismooth++)
+        for (int ismooth = 0; ismooth < 5; ismooth++)
             gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
 
         compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
