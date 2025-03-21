@@ -280,7 +280,7 @@ int main() {
         restrict_j<<<grid_size[ilevel], block_size>>>(J[ilevel], J[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
 
 
-    for (int iloop = 0; iloop < 80; iloop++) {
+    for (int iloop = 0; iloop < 2; iloop++) {
     std::cout << "Loop = " << iloop << std::endl;
     
     // Downstroke of V-cycle
@@ -330,7 +330,7 @@ int main() {
     for (int ismooth = 0; ismooth < 100; ismooth++) {
         adi_x<<<grid_size_adix, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
         adi_y<<<grid_size_adiy, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-        compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);        
+        compute_lin_resid<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], Rlin[nlevels-1], nx[nlevels-1], ny[nlevels-1]);        
         thrust::device_ptr<double> t_linr(Rlin[nlevels-1]);
         tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[nlevels-1] * ny[nlevels-1], square(), 0.0, thrust::plus<double>()));
         std::cout << "At coarsest level ismooth = " << ismooth << ", residual after smoothing = " << tmp_resid << std::endl;
