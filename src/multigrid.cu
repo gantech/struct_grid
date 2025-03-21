@@ -272,7 +272,7 @@ int main() {
         restrict_j<<<grid_size[ilevel], block_size>>>(J[ilevel], J[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
 
 
-    for (int iloop = 0; iloop < 100; iloop++) {
+    for (int iloop = 0; iloop < 10; iloop++) {
     std::cout << "Loop = " << iloop << std::endl;
     
     // Downstroke of V-cycle
@@ -319,13 +319,9 @@ int main() {
     dim3 block_size_adi(TILE_SIZE_ADI, 1,1);
     dim3 grid_size_adiy(ceil(nx[nlevels-1] / (double)TILE_SIZE_ADI), 1, 1);
 
-    for (int ismooth = 0; ismooth < 10; ismooth++) {
+    for (int ismooth = 0; ismooth < 100; ismooth++) {
         adi_x<<<grid_size_adix, block_size_adi>>>(deltaT[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-
-        // This is a problem - The RHS has no way of getting updated when we get deltaT from ADI_X to update it for ADI_Y
-        
         adi_y<<<grid_size_adiy, block_size_adi>>>(deltaT[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-        
     }
 
     // Upstroke of V-cycle - This should end on the finest level (ilevel = 0)
