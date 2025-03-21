@@ -133,6 +133,7 @@ __global__ void prolongate_error(double * deltaTc, double * deltaTf, int nxc, in
 
     if ( (ic < nxc) && (jc < nyc) ) {
 
+        printf("Prolongating (i,j) = %d, %d, deltaT = %e", ic, jc, deltaTc[idx_rc]);
         deltaTf[idx_rf1] += deltaTc[idx_rc];
         deltaTf[idx_rf2] += deltaTc[idx_rc];
         deltaTf[idx_rf3] += deltaTc[idx_rc];
