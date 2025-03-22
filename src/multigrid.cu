@@ -14,6 +14,9 @@
 // Kernel function for initialization - No tiling or shared memory
 __global__ void initialize(double *T, int nx, int ny, double dx, double dy);
 
+// Kernel function for initialization - No tiling or shared memory
+__global__ void initialize_ref(double *T, int nx, int ny, double dx, double dy);
+
 // Kernel function for update - No tiling or shared memory
 __global__ void update(double *T, double *deltaT, int nx, int ny, double dx, double dy);
 
@@ -298,12 +301,20 @@ int main() {
     dim3 block_size(TILE_SIZE, TILE_SIZE, 1);
 
     initialize<<<grid_size[0], block_size>>>(T, nx[0], ny[0], dx, dy);
+    cudaDeviceSynchronize();
 
-    // Write 1 V-cycle of multigrid
     compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
+    cudaDeviceSynchronize();
     double glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
-    std::cout << "Starting residual = " << glob_resid << std::endl;         
+    std::cout << "Starting residual with const 300.0 field = " << glob_resid << std::endl;
 
+    initialize_ref<<<grid_size[0], block_size>>>(T, nx[0], ny[0], dx, dy);
+    cudaDeviceSynchronize();
+
+    compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
+    cudaDeviceSynchronize();
+    double glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
+    std::cout << "Starting residual with correct solution field T = 300.0 + x^2 + (y/3)^3 = " << glob_resid << std::endl;    
 
     // // Compute Jacobian directly on second level. Won't match the restriction for the matrix. 
     // double *T2;
@@ -311,12 +322,12 @@ int main() {
     // compute_r_j<<<grid_size[1], block_size>>>(T2, J[1], R[1], nx[1], ny[1], 2.0 * dx, 2.0 * dy, kc);
     // cudaDeviceSynchronize();
     
-    // Compute the Jacobian matrix at the coarser levels 
-    for (int ilevel = 1; ilevel < nlevels; ilevel++) {
-        std::cout << "Restricting J from ilevel = " << ilevel - 1 << " to ilevel = " << ilevel << std::endl;
-        restrict_j<<<grid_size[ilevel], block_size>>>(J[ilevel], J[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
-        cudaDeviceSynchronize();
-    }
+    // // Compute the Jacobian matrix at the coarser levels 
+    // for (int ilevel = 1; ilevel < nlevels; ilevel++) {
+    //     std::cout << "Restricting J from ilevel = " << ilevel - 1 << " to ilevel = " << ilevel << std::endl;
+    //     restrict_j<<<grid_size[ilevel], block_size>>>(J[ilevel], J[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
+    //     cudaDeviceSynchronize();
+    // }
 
 
     // double * h_Jc = new double(nx[nlevels-1] * ny[nlevels-1] * 5);
@@ -332,23 +343,25 @@ int main() {
     // }
     // myfile.close();
 
-    for (int iloop = 0; iloop < 80; iloop++) {
-    std::cout << "Loop = " << iloop << std::endl;
-    
-    // Downstroke of V-cycle
+    // Write 1 V-cycle of multigrid
 
-    // Initialize deltaT at all levels to zero
-    for (int ilevel = 0; ilevel < nlevels; ilevel++) {
-        initialize_zero<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], nx[ilevel], ny[ilevel]);
-        cudaDeviceSynchronize();
-    }
+    // for (int iloop = 0; iloop < 80; iloop++) {
+    // std::cout << "Loop = " << iloop << std::endl;
+    
+    // // Downstroke of V-cycle
+
+    // // Initialize deltaT at all levels to zero
+    // for (int ilevel = 0; ilevel < nlevels; ilevel++) {
+    //     initialize_zero<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], nx[ilevel], ny[ilevel]);
+    //     cudaDeviceSynchronize();
+    // }
         
     
-    // Do some smoothing on the finest level first
-    for (int ismooth = 0; ismooth < 1000; ismooth++) {
-        gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, nx[0], ny[0]);
-        cudaDeviceSynchronize();
-    }
+    // // Do some smoothing on the finest level first
+    // for (int ismooth = 0; ismooth < 1000; ismooth++) {
+    //     gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, nx[0], ny[0]);
+    //     cudaDeviceSynchronize();
+    // }
 
     // // // Compute the residual of the linear system of equations at this level
     // compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, Rlin[0], nx[0], ny[0]);
@@ -432,15 +445,15 @@ int main() {
     //     cudaDeviceSynchronize();
     // }
 
-    update<<<grid_size[0], block_size>>>(T, deltaT[0], nx[0], ny[0], dx, dy);
-    cudaDeviceSynchronize();
+    // update<<<grid_size[0], block_size>>>(T, deltaT[0], nx[0], ny[0], dx, dy);
+    // cudaDeviceSynchronize();
 
-    compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
-    cudaDeviceSynchronize();
-    glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
-    std::cout << "Ending residual = " << glob_resid << std::endl;    
+    // compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
+    // cudaDeviceSynchronize();
+    // glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
+    // std::cout << "Ending residual = " << glob_resid << std::endl;    
 
-    }
+    // }
 
 
 

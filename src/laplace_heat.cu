@@ -12,6 +12,19 @@ __global__ void initialize(double *T, int nx, int ny, double dx, double dy) {
     
 }
 
+// Kernel function for initialization - No tiling or shared memory
+__global__ void initialize_ref(double *T, int nx, int ny, double dx, double dy) {
+
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    int col = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if ((row < nx) && (col < ny)) {
+        double y = (0.5 + col) * dy;
+        double x = (0.5 + row) * dx;
+        T[(col * nx) + row] = 300.0 + x*x + (y*y*y)/ 27.0;
+    }
+    
+}
 // Kernel function for update - No tiling or shared memory
 __global__ void update(double *T, double *deltaT, int nx, int ny, double dx, double dy) {
 
