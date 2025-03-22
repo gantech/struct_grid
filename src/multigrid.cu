@@ -427,7 +427,7 @@ int main() {
     std::ofstream deltatfile("deltaT_coarse_output.txt");
     for (int j = 0; j < ny[nlevels-1]; ++j) {
         for (int i = 0; i < nx[nlevels-1]; ++i) {
-            deltatfile << h_T[j * nx[nlevels-1] + i] << " ";
+            deltatfile << h_deltaT[j * nx[nlevels-1] + i] << " ";
         }
         deltatfile << std::endl;
     }
@@ -465,11 +465,11 @@ int main() {
     cudaDeviceSynchronize();
 
 
-    double *h_deltaT = new double[nx[0] * ny[0]];
+    h_deltaT = new double[nx[0] * ny[0]];
     cudaMemcpy(h_deltaT, deltaT[0], nx[0] * ny[0] * sizeof(double), cudaMemcpyDeviceToHost);
 
     // Write h_deltaT to a file
-    std::ofstream deltatfile("deltaT_fine_output.txt");
+    deltatfile = std::ofstream("deltaT_fine_output.txt");
     for (int j = 0; j < ny[0]; ++j) {
         for (int i = 0; i < nx[0]; ++i) {
             deltatfile << h_T[j * nx[0] + i] << " ";
