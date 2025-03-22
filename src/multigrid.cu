@@ -313,7 +313,7 @@ int main() {
 
     compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
     cudaDeviceSynchronize();
-    double glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
+    glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
     std::cout << "Starting residual with correct solution field T = 300.0 + x^2 + (y/3)^3 = " << glob_resid << std::endl;    
 
     // // Compute Jacobian directly on second level. Won't match the restriction for the matrix. 
