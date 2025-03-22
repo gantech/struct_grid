@@ -206,7 +206,7 @@ __global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, 
 }
 
 // Kernel function for Gauss-Seidel smoother - No tiling or shared memory
-__global__ void gauss_seidel(double *deltaT, double *J, double *R, int nx, int ny) {
+__global__ void gauss_seidel(double *deltaT, double * deltaT1, double *J, double *R, int nx, int ny) {
 
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -245,7 +245,7 @@ __global__ void gauss_seidel(double *deltaT, double *J, double *R, int nx, int n
             tijp1 = deltaT[idx_r + nx];
         }
 
-        deltaT[idx_r] = 0.99*(R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
+        deltaT1[idx_r] = (R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
 
         if (std::abs(jij) < 1e-8)
             printf("nx = %d, ny = %d, i = %d, j = %d, deltaT = %e, R = %e, jim1j = %e, jip1j = %e, jijm1 = %e, jijp1 = %e, jij = %e \n", nx, ny, i, j, deltaT[idx_r], R[idx_r], jim1j, jip1j, jijm1, jijp1, jij);
@@ -284,9 +284,10 @@ int main() {
     double * nlr;
     cudaMalloc(&nlr, nx_f * ny_f * sizeof(double));
 
-    std::vector<double*> deltaT(nlevels), J(nlevels), R(nlevels), Rlin(nlevels);
+    std::vector<double*> deltaT(nlevels), deltaT1, J(nlevels), R(nlevels), Rlin(nlevels);
     for (int i = 0; i < nlevels; i++) {
         cudaMalloc(&deltaT[i], nx[i] * ny[i] * sizeof(double));
+        cudaMalloc(&deltaT1[i], nx[i] * ny[i] * sizeof(double));
         cudaMalloc(&J[i], nx[i] * ny[i] * 5 * sizeof(double));
         cudaMalloc(&R[i], nx[i] * ny[i] * sizeof(double));
         cudaMalloc(&Rlin[i], nx[i] * ny[i] * sizeof(double));
@@ -356,12 +357,16 @@ int main() {
     for (int ilevel = 0; ilevel < nlevels; ilevel++) {
         initialize_zero<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], nx[ilevel], ny[ilevel]);
         cudaDeviceSynchronize();
+        initialize_zero<<<grid_size[ilevel], block_size>>>(deltaT1[ilevel], nx[ilevel], ny[ilevel]);
+        cudaDeviceSynchronize();
     }
         
     
     // Do some smoothing on the finest level first
     for (int ismooth = 0; ismooth < 10; ismooth++) {
-        gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, nx[0], ny[0]);
+        gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], deltaT1[0], J[0], nlr, nx[0], ny[0]);
+        cudaDeviceSynchronize();
+        gauss_seidel<<<grid_size[0], block_size>>>(deltaT1[0], deltaT[0], J[0], nlr, nx[0], ny[0]);
         cudaDeviceSynchronize();
     }
 
@@ -479,8 +484,10 @@ int main() {
     // deltatfile.close();
 
     for (int ismooth=0; ismooth < 10; ismooth++) {
-        gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, nx[0], ny[0]);
+        gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], deltaT1[0], J[0], nlr, nx[0], ny[0]);
         cudaDeviceSynchronize();
+        gauss_seidel<<<grid_size[0], block_size>>>(deltaT1[0], deltaT[0], J[0], nlr, nx[0], ny[0]);
+        cudaDeviceSynchronize();        
     }
 
     cudaMemcpy(h_deltaT, deltaT[0], nx[0] * ny[0] * sizeof(double), cudaMemcpyDeviceToHost);
