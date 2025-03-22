@@ -318,34 +318,6 @@ int main() {
     // glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
     // std::cout << "Starting residual with correct solution field T = 300.0 + x^2 + (y/3)^3 = " << glob_resid << std::endl;    
 
-    // double *h_R = new double[nx_f * ny_f];
-    // cudaMemcpy(h_R, nlr, nx_f * ny_f * sizeof(double), cudaMemcpyDeviceToHost);
-
-    // // Write h_R to a file 
-    // std::ofstream outfile("residual.txt");
-    // for (int j = 0; j < ny_f; ++j) {
-    //     for (int i = 0; i < nx_f; ++i) {
-    //         outfile << h_R[j * nx_f + i] << " ";
-    //     }
-    //     outfile << std::endl;
-    // }
-    // outfile.close();
-    // delete[] h_R;    
-
-    // double *h_T = new double[nx_f * ny_f];
-    // cudaMemcpy(h_T, T, nx_f * ny_f * sizeof(double), cudaMemcpyDeviceToHost);
-
-    // // Write h_T to a file
-    // std::ofstream tfile("temperature_output.txt");
-    // for (int j = 0; j < ny_f; ++j) {
-    //     for (int i = 0; i < nx_f; ++i) {
-    //         tfile << h_T[j * nx_f + i] << " ";
-    //     }
-    //     tfile << std::endl;
-    // }
-    // tfile.close();
-    // delete[] h_T;    
-
     // // Compute Jacobian directly on second level. Won't match the restriction for the matrix. 
     // double *T2;
     // cudaMalloc(&T2, nx[1]*ny[1] * sizeof(double));
@@ -486,6 +458,33 @@ int main() {
     }
 
 
+    double *h_R = new double[nx_f * ny_f];
+    cudaMemcpy(h_R, nlr, nx_f * ny_f * sizeof(double), cudaMemcpyDeviceToHost);
+
+    // Write h_R to a file 
+    std::ofstream outfile("residual.txt");
+    for (int j = 0; j < ny_f; ++j) {
+        for (int i = 0; i < nx_f; ++i) {
+            outfile << h_R[j * nx_f + i] << " ";
+        }
+        outfile << std::endl;
+    }
+    outfile.close();
+    delete[] h_R;    
+
+    double *h_T = new double[nx_f * ny_f];
+    cudaMemcpy(h_T, T, nx_f * ny_f * sizeof(double), cudaMemcpyDeviceToHost);
+
+    // Write h_T to a file
+    std::ofstream tfile("temperature_output.txt");
+    for (int j = 0; j < ny_f; ++j) {
+        for (int i = 0; i < nx_f; ++i) {
+            tfile << h_T[j * nx_f + i] << " ";
+        }
+        tfile << std::endl;
+    }
+    tfile.close();
+    delete[] h_T;    
 
     return 0;
 }
