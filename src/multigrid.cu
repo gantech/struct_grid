@@ -137,10 +137,10 @@ __global__ void prolongate_error(double * deltaTc, double * deltaTf, int nxc, in
     if ( (ic < nxc) && (jc < nyc) ) {
 
         // printf("Prolongating (i,j) = %d, %d, deltaT = %e \n", ic, jc, deltaTc[idx_rc]);
-        deltaTf[idx_rf1] += 0.9*deltaTc[idx_rc]/std::sqrt(2.0);
-        deltaTf[idx_rf2] += 0.9*deltaTc[idx_rc]/std::sqrt(2.0);
-        deltaTf[idx_rf3] += 0.9*deltaTc[idx_rc]/std::sqrt(2.0);
-        deltaTf[idx_rf4] += 0.9*deltaTc[idx_rc]/std::sqrt(2.0);
+        deltaTf[idx_rf1] -= 0.9*deltaTc[idx_rc]/std::sqrt(2.0);
+        deltaTf[idx_rf2] -= 0.9*deltaTc[idx_rc]/std::sqrt(2.0);
+        deltaTf[idx_rf3] -= 0.9*deltaTc[idx_rc]/std::sqrt(2.0);
+        deltaTf[idx_rf4] -= 0.9*deltaTc[idx_rc]/std::sqrt(2.0);
         
     }    
 
