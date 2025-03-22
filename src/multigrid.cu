@@ -317,8 +317,8 @@ int main() {
     std::cout << "Starting residual with correct solution field T = 300.0 + x^2 + (y/3)^3 = " << glob_resid << std::endl;    
 
 
-    double *h_R = new double[nx * ny];
-    cudaMemcpy(h_R, nlr, nx * ny * sizeof(double), cudaMemcpyDeviceToHost);
+    double *h_R = new double[nx_f * ny_f];
+    cudaMemcpy(h_R, nlr, nx_f * ny_f * sizeof(double), cudaMemcpyDeviceToHost);
 
     // Write h_R to a file 
     std::ofstream outfile("residual.txt");
