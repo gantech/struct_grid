@@ -245,7 +245,7 @@ __global__ void gauss_seidel(double *deltaT, double *J, double *R, int nx, int n
             tijp1 = deltaT[idx_r + nx];
         }
 
-        deltaT[idx_r] = 0.99*(R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
+        deltaT[idx_r] = (R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
 
         if (std::abs(jij) < 1e-8)
             printf("nx = %d, ny = %d, i = %d, j = %d, deltaT = %e, R = %e, jim1j = %e, jip1j = %e, jijm1 = %e, jijp1 = %e, jij = %e \n", nx, ny, i, j, deltaT[idx_r], R[idx_r], jim1j, jip1j, jijm1, jijp1, jij);
@@ -347,7 +347,7 @@ int main() {
 
     // Write 1 V-cycle of multigrid
 
-    for (int iloop = 0; iloop < 1; iloop++) {
+    for (int iloop = 0; iloop < 10; iloop++) {
     std::cout << "Loop = " << iloop << std::endl;
     
     // Downstroke of V-cycle
