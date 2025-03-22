@@ -92,7 +92,7 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
             radd += kc * 8.0 * t_bc_bot / 3.0;
         } else if (col == (ny - 1)) {
             jij -= 2.0;
-            jim1j += 0.3333333333333333;
+            jijm1 += 0.3333333333333333;
             jijp1 -= 1.0;
             tijm1 = T[idx_r - nx];
             double t_bc_top = 300.0 + 1.0 + (x*x);
