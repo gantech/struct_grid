@@ -309,16 +309,6 @@ int main() {
     glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
     std::cout << "Starting residual with const 300.0 field = " << glob_resid << std::endl;
 
-    initialize_ref<<<grid_size[0], block_size>>>(T, nx[0], ny[0], dx, dy);
-    cudaDeviceSynchronize();
-
-    compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
-    cudaDeviceSynchronize();
-    glob_resid = 0.0;
-    glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
-    std::cout << "Starting residual with correct solution field T = 300.0 + x^2 + (y/3)^3 = " << glob_resid << std::endl;    
-
-
     double *h_R = new double[nx_f * ny_f];
     cudaMemcpy(h_R, nlr, nx_f * ny_f * sizeof(double), cudaMemcpyDeviceToHost);
 
@@ -331,7 +321,16 @@ int main() {
         outfile << std::endl;
     }
     outfile.close();
-    delete[] h_R;
+    delete[] h_R;    
+
+    initialize_ref<<<grid_size[0], block_size>>>(T, nx[0], ny[0], dx, dy);
+    cudaDeviceSynchronize();
+
+    compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
+    cudaDeviceSynchronize();
+    glob_resid = 0.0;
+    glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
+    std::cout << "Starting residual with correct solution field T = 300.0 + x^2 + (y/3)^3 = " << glob_resid << std::endl;    
 
     double *h_T = new double[nx_f * ny_f];
     cudaMemcpy(h_T, T, nx_f * ny_f * sizeof(double), cudaMemcpyDeviceToHost);
