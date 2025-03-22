@@ -400,30 +400,32 @@ int main() {
     //     std::cout << "At level ilev = " << ilevel << ", residual after smoothing = " << tmp_resid << std::endl;
 
     // }
-    //  // Restrict the residual of the linear system to coarsest level
-    // restrict_resid<<<grid_size[nlevels-1], block_size>>>(R[nlevels-1], Rlin[nlevels-2], nx[nlevels-1], ny[nlevels-1], nx[nlevels-2], ny[nlevels-2]);
-    // cudaDeviceSynchronize();
+     // Restrict the residual of the linear system to coarsest level
+    restrict_resid<<<grid_size[nlevels-1], block_size>>>(R[nlevels-1], Rlin[nlevels-2], nx[nlevels-1], ny[nlevels-1], nx[nlevels-2], ny[nlevels-2]);
+    cudaDeviceSynchronize();
 
     // // Do bottom level solve with ADI 
     // dim3 grid_size_adix(ceil(ny[nlevels-1] / (double)TILE_SIZE_ADI), 1, 1);
     // dim3 block_size_adi(TILE_SIZE_ADI, 1,1);
     // dim3 grid_size_adiy(ceil(nx[nlevels-1] / (double)TILE_SIZE_ADI), 1, 1);
 
-    // for (int ismooth = 0; ismooth < 10; ismooth++) {
+    for (int ismooth = 0; ismooth < 10; ismooth++) {
 
-    //     compute_lin_resid<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], Rlin[nlevels-1], nx[nlevels-1], ny[nlevels-1]);        
-    //     cudaDeviceSynchronize();
-    //     thrust::device_ptr<double> t_linr(Rlin[nlevels-1]);
-    //     double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[nlevels-1] * ny[nlevels-1], square(), 0.0, thrust::plus<double>()));
-    //     std::cout << "At coarsest level ismooth = " << ismooth << ", residual after smoothing = " << tmp_resid << std::endl;
+        compute_lin_resid<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], Rlin[nlevels-1], nx[nlevels-1], ny[nlevels-1]);        
+        cudaDeviceSynchronize();
+        thrust::device_ptr<double> t_linr(Rlin[nlevels-1]);
+        double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[nlevels-1] * ny[nlevels-1], square(), 0.0, thrust::plus<double>()));
+        std::cout << "At coarsest level ismooth = " << ismooth << ", residual after smoothing = " << tmp_resid << std::endl;
 
-    //     gauss_seidel<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-    //     cudaDeviceSynchronize();        
-    //     // adi_x<<<grid_size_adix, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-    //     // cudaDeviceSynchronize();
-    //     // adi_y<<<grid_size_adiy, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-    //     // cudaDeviceSynchronize();
-    // }
+        gauss_seidel<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], deltaT1[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+        cudaDeviceSynchronize();  
+        gauss_seidel<<<grid_size[nlevels-1], block_size>>>(deltaT1[nlevels-1], deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+        cudaDeviceSynchronize();                      
+        // adi_x<<<grid_size_adix, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+        // cudaDeviceSynchronize();
+        // adi_y<<<grid_size_adiy, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+        // cudaDeviceSynchronize();
+    }
 
     // double *h_deltaT = new double[nx[nlevels-1] * ny[nlevels-1]];
     // cudaMemcpy(h_deltaT, deltaT[nlevels-1], nx[nlevels-1] * ny[nlevels-1] * sizeof(double), cudaMemcpyDeviceToHost);
@@ -466,9 +468,8 @@ int main() {
 
     // }
 
-    // prolongate_error<<<grid_size[1], block_size>>>(deltaT[1], deltaT[0], nx[1], ny[1], nx[0], ny[0]);
-    // cudaDeviceSynchronize();
-
+    prolongate_error<<<grid_size[1], block_size>>>(deltaT[1], deltaT[0], nx[1], ny[1], nx[0], ny[0]);
+    cudaDeviceSynchronize();
 
     double* h_deltaT = new double[nx[0] * ny[0]];
     // cudaMemcpy(h_deltaT, deltaT[0], nx[0] * ny[0] * sizeof(double), cudaMemcpyDeviceToHost);
