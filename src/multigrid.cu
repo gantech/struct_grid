@@ -429,6 +429,11 @@ int main() {
 
         // Do some more smoothing at this level to reduce the error
         for (int ismooth = 0; ismooth < 10; ismooth++) {
+            compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
+            cudaDeviceSynchronize();
+            thrust::device_ptr<double> t_linr(Rlin[nlevels-1]);
+            double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[nlevels-1] * ny[nlevels-1], square(), 0.0, thrust::plus<double>()));
+            std::cout << "At coarsest level ismooth = " << ismooth << ", residual before smoothing = " << tmp_resid << std::endl;            
             gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
             cudaDeviceSynchronize();
         }
