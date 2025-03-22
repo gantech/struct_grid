@@ -413,9 +413,9 @@ int main() {
         cudaDeviceSynchronize();
         compute_lin_resid<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], Rlin[nlevels-1], nx[nlevels-1], ny[nlevels-1]);        
         cudaDeviceSynchronize();
-        // thrust::device_ptr<double> t_linr(Rlin[nlevels-1]);
-        // double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[nlevels-1] * ny[nlevels-1], square(), 0.0, thrust::plus<double>()));
-        // std::cout << "At coarsest level ismooth = " << ismooth << ", residual after smoothing = " << tmp_resid << std::endl;
+        thrust::device_ptr<double> t_linr(Rlin[nlevels-1]);
+        double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[nlevels-1] * ny[nlevels-1], square(), 0.0, thrust::plus<double>()));
+        std::cout << "At coarsest level ismooth = " << ismooth << ", residual after smoothing = " << tmp_resid << std::endl;
     }
 
     // Upstroke of V-cycle - This should end on the finest level (ilevel = 0)
