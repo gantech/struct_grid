@@ -1,6 +1,6 @@
 #include <iostream>
 
-#define TILE_SIZE_ADI 2
+#define TILE_SIZE_ADI 1
 #define NNX 8
 #define NNY 24
 
