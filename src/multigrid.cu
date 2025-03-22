@@ -482,8 +482,8 @@ int main() {
         gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, nx[0], ny[0]);
         cudaDeviceSynchronize();
     }
-    cudaMemcpy(h_deltaT, deltaT[0], nx[0] * ny[0] * sizeof(double), cudaMemcpyDeviceToHost);
-
+    
+    // cudaMemcpy(h_deltaT, deltaT[0], nx[0] * ny[0] * sizeof(double), cudaMemcpyDeviceToHost);
     // deltatfile = std::ofstream("deltaT_fine_aftersmooth_output.txt");
     // for (int j = 0; j < ny[0]; ++j) {
     //     for (int i = 0; i < nx[0]; ++i) {
