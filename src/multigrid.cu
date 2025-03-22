@@ -136,7 +136,7 @@ __global__ void prolongate_error(double * deltaTc, double * deltaTf, int nxc, in
 
     if ( (ic < nxc) && (jc < nyc) ) {
 
-        printf("Prolongating (i,j), idx_rc = %d, %d, %d deltaT = %e, idx_rf1 = %d, idx_rf2 = %d, idx_rf3 = %d, idx_rf4 = %d \n", ic, jc, idx_rc, deltaTc[idx_rc], idx_rf1, idx_rf2, idx_rf3, idx_rf4);
+        //printf("Prolongating (i,j), idx_rc = %d, %d, %d deltaT = %e, idx_rf1 = %d, idx_rf2 = %d, idx_rf3 = %d, idx_rf4 = %d \n", ic, jc, idx_rc, deltaTc[idx_rc], idx_rf1, idx_rf2, idx_rf3, idx_rf4);
         deltaTf[idx_rf1] += 0.9*deltaTc[idx_rc]/std::sqrt(2.0);
         deltaTf[idx_rf2] += 0.9*deltaTc[idx_rc]/std::sqrt(2.0);
         deltaTf[idx_rf3] += 0.9*deltaTc[idx_rc]/std::sqrt(2.0);
