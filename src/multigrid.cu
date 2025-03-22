@@ -373,110 +373,110 @@ int main() {
     glob_resid = std::sqrt(thrust::transform_reduce(t_r0, t_r0 + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
     std::cout << "Finest level linear residual after smoothing = " << glob_resid << std::endl;
 
-    for (int ilevel = 1; ilevel < nlevels-1; ilevel++) {
-        // Restrict the residual of the linear system
-        restrict_resid<<<grid_size[ilevel], block_size>>>(R[ilevel], Rlin[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
-        cudaDeviceSynchronize();
-        thrust::device_ptr<double> t_r(R[ilevel]);
-        double tmp_resid = std::sqrt(thrust::transform_reduce(t_r, t_r + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
-        std::cout << "At level ilev = " << ilevel << ", restricted residual = " << tmp_resid << std::endl;
+    // for (int ilevel = 1; ilevel < nlevels-1; ilevel++) {
+    //     // Restrict the residual of the linear system
+    //     restrict_resid<<<grid_size[ilevel], block_size>>>(R[ilevel], Rlin[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
+    //     cudaDeviceSynchronize();
+    //     thrust::device_ptr<double> t_r(R[ilevel]);
+    //     double tmp_resid = std::sqrt(thrust::transform_reduce(t_r, t_r + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
+    //     std::cout << "At level ilev = " << ilevel << ", restricted residual = " << tmp_resid << std::endl;
         
-        // Perform some smoothing at this level to get the error
-        for (int ismooth = 0; ismooth < 10; ismooth++) {
-            gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
-            cudaDeviceSynchronize();
-        }
+    //     // Perform some smoothing at this level to get the error
+    //     for (int ismooth = 0; ismooth < 10; ismooth++) {
+    //         gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+    //         cudaDeviceSynchronize();
+    //     }
 
-        // Compute the residual of the linear system of equations at this level.
-        compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
-        cudaDeviceSynchronize();
-        thrust::device_ptr<double> t_linr(Rlin[ilevel]);
-        tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
-        std::cout << "At level ilev = " << ilevel << ", residual after smoothing = " << tmp_resid << std::endl;
+    //     // Compute the residual of the linear system of equations at this level.
+    //     compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
+    //     cudaDeviceSynchronize();
+    //     thrust::device_ptr<double> t_linr(Rlin[ilevel]);
+    //     tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
+    //     std::cout << "At level ilev = " << ilevel << ", residual after smoothing = " << tmp_resid << std::endl;
 
-    }
-     // Restrict the residual of the linear system to coarsest level
-    restrict_resid<<<grid_size[nlevels-1], block_size>>>(R[nlevels-1], Rlin[nlevels-2], nx[nlevels-1], ny[nlevels-1], nx[nlevels-2], ny[nlevels-2]);
-    cudaDeviceSynchronize();
+    // }
+    //  // Restrict the residual of the linear system to coarsest level
+    // restrict_resid<<<grid_size[nlevels-1], block_size>>>(R[nlevels-1], Rlin[nlevels-2], nx[nlevels-1], ny[nlevels-1], nx[nlevels-2], ny[nlevels-2]);
+    // cudaDeviceSynchronize();
 
-    // Do bottom level solve with ADI 
-    dim3 grid_size_adix(ceil(ny[nlevels-1] / (double)TILE_SIZE_ADI), 1, 1);
-    dim3 block_size_adi(TILE_SIZE_ADI, 1,1);
-    dim3 grid_size_adiy(ceil(nx[nlevels-1] / (double)TILE_SIZE_ADI), 1, 1);
+    // // Do bottom level solve with ADI 
+    // dim3 grid_size_adix(ceil(ny[nlevels-1] / (double)TILE_SIZE_ADI), 1, 1);
+    // dim3 block_size_adi(TILE_SIZE_ADI, 1,1);
+    // dim3 grid_size_adiy(ceil(nx[nlevels-1] / (double)TILE_SIZE_ADI), 1, 1);
 
-    for (int ismooth = 0; ismooth < 10; ismooth++) {
+    // for (int ismooth = 0; ismooth < 10; ismooth++) {
 
-        compute_lin_resid<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], Rlin[nlevels-1], nx[nlevels-1], ny[nlevels-1]);        
-        cudaDeviceSynchronize();
-        thrust::device_ptr<double> t_linr(Rlin[nlevels-1]);
-        double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[nlevels-1] * ny[nlevels-1], square(), 0.0, thrust::plus<double>()));
-        std::cout << "At coarsest level ismooth = " << ismooth << ", residual after smoothing = " << tmp_resid << std::endl;
+    //     compute_lin_resid<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], Rlin[nlevels-1], nx[nlevels-1], ny[nlevels-1]);        
+    //     cudaDeviceSynchronize();
+    //     thrust::device_ptr<double> t_linr(Rlin[nlevels-1]);
+    //     double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[nlevels-1] * ny[nlevels-1], square(), 0.0, thrust::plus<double>()));
+    //     std::cout << "At coarsest level ismooth = " << ismooth << ", residual after smoothing = " << tmp_resid << std::endl;
 
-        gauss_seidel<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-        cudaDeviceSynchronize();        
-        // adi_x<<<grid_size_adix, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-        // cudaDeviceSynchronize();
-        // adi_y<<<grid_size_adiy, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-        // cudaDeviceSynchronize();
-    }
+    //     gauss_seidel<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+    //     cudaDeviceSynchronize();        
+    //     // adi_x<<<grid_size_adix, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+    //     // cudaDeviceSynchronize();
+    //     // adi_y<<<grid_size_adiy, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+    //     // cudaDeviceSynchronize();
+    // }
 
-    double *h_deltaT = new double[nx[nlevels-1] * ny[nlevels-1]];
-    cudaMemcpy(h_deltaT, deltaT[nlevels-1], nx[nlevels-1] * ny[nlevels-1] * sizeof(double), cudaMemcpyDeviceToHost);
+    // double *h_deltaT = new double[nx[nlevels-1] * ny[nlevels-1]];
+    // cudaMemcpy(h_deltaT, deltaT[nlevels-1], nx[nlevels-1] * ny[nlevels-1] * sizeof(double), cudaMemcpyDeviceToHost);
 
-    // Write h_deltaT to a file
-    std::ofstream deltatfile("deltaT_coarse_output.txt");
-    for (int j = 0; j < ny[nlevels-1]; ++j) {
-        for (int i = 0; i < nx[nlevels-1]; ++i) {
-            deltatfile << h_deltaT[j * nx[nlevels-1] + i] << " ";
-        }
-        deltatfile << std::endl;
-    }
-    deltatfile.close();
-    delete[] h_deltaT;
+    // // Write h_deltaT to a file
+    // std::ofstream deltatfile("deltaT_coarse_output.txt");
+    // for (int j = 0; j < ny[nlevels-1]; ++j) {
+    //     for (int i = 0; i < nx[nlevels-1]; ++i) {
+    //         deltatfile << h_deltaT[j * nx[nlevels-1] + i] << " ";
+    //     }
+    //     deltatfile << std::endl;
+    // }
+    // deltatfile.close();
+    // delete[] h_deltaT;
 
-    // Upstroke of V-cycle - This should end on the finest level (ilevel = 0)
-    for (int ilevel = nlevels - 2; ilevel > 0; ilevel--) {
-        // Prolongate the error
-        std::cout << "Prolongating error at ilevel = " << ilevel << ", ilevel + 1 = " << ilevel + 1 << std::endl;
-        std::cout << "Grid Size = " << grid_size[ilevel+1].x << ", " << grid_size[ilevel+1].y << std::endl;
-        prolongate_error<<<grid_size[ilevel+1], block_size>>>(deltaT[ilevel+1], deltaT[ilevel], nx[ilevel+1], ny[ilevel+1], nx[ilevel], ny[ilevel]);
-        cudaDeviceSynchronize();
+    // // Upstroke of V-cycle - This should end on the finest level (ilevel = 0)
+    // for (int ilevel = nlevels - 2; ilevel > 0; ilevel--) {
+    //     // Prolongate the error
+    //     std::cout << "Prolongating error at ilevel = " << ilevel << ", ilevel + 1 = " << ilevel + 1 << std::endl;
+    //     std::cout << "Grid Size = " << grid_size[ilevel+1].x << ", " << grid_size[ilevel+1].y << std::endl;
+    //     prolongate_error<<<grid_size[ilevel+1], block_size>>>(deltaT[ilevel+1], deltaT[ilevel], nx[ilevel+1], ny[ilevel+1], nx[ilevel], ny[ilevel]);
+    //     cudaDeviceSynchronize();
 
-        // Do some more smoothing at this level to reduce the error
-        for (int ismooth = 0; ismooth < 10; ismooth++) {
-            compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
-            cudaDeviceSynchronize();
-            thrust::device_ptr<double> t_linr(Rlin[ilevel]);
-            double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
-            std::cout << "At coarsest level ismooth = " << ismooth << ", residual before smoothing = " << tmp_resid << std::endl;            
-            gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
-            cudaDeviceSynchronize();
-        }
+    //     // Do some more smoothing at this level to reduce the error
+    //     for (int ismooth = 0; ismooth < 10; ismooth++) {
+    //         compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
+    //         cudaDeviceSynchronize();
+    //         thrust::device_ptr<double> t_linr(Rlin[ilevel]);
+    //         double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
+    //         std::cout << "At coarsest level ismooth = " << ismooth << ", residual before smoothing = " << tmp_resid << std::endl;            
+    //         gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+    //         cudaDeviceSynchronize();
+    //     }
 
-        compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
-        cudaDeviceSynchronize();
-        thrust::device_ptr<double> t_linr(Rlin[ilevel]);
-        double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
-        std::cout << "At level ilev = " << ilevel << ", residual after smoothing in upstroke = " << tmp_resid << std::endl;
+    //     compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
+    //     cudaDeviceSynchronize();
+    //     thrust::device_ptr<double> t_linr(Rlin[ilevel]);
+    //     double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
+    //     std::cout << "At level ilev = " << ilevel << ", residual after smoothing in upstroke = " << tmp_resid << std::endl;
 
-    }
+    // }
 
-    prolongate_error<<<grid_size[1], block_size>>>(deltaT[1], deltaT[0], nx[1], ny[1], nx[0], ny[0]);
-    cudaDeviceSynchronize();
+    // prolongate_error<<<grid_size[1], block_size>>>(deltaT[1], deltaT[0], nx[1], ny[1], nx[0], ny[0]);
+    // cudaDeviceSynchronize();
 
 
-    h_deltaT = new double[nx[0] * ny[0]];
-    cudaMemcpy(h_deltaT, deltaT[0], nx[0] * ny[0] * sizeof(double), cudaMemcpyDeviceToHost);
+    // h_deltaT = new double[nx[0] * ny[0]];
+    // cudaMemcpy(h_deltaT, deltaT[0], nx[0] * ny[0] * sizeof(double), cudaMemcpyDeviceToHost);
 
-    // Write h_deltaT to a file
-    deltatfile = std::ofstream("deltaT_fine_output.txt");
-    for (int j = 0; j < ny[0]; ++j) {
-        for (int i = 0; i < nx[0]; ++i) {
-            deltatfile << h_deltaT[j * nx[0] + i] << " ";
-        }
-        deltatfile << std::endl;
-    }
-    deltatfile.close();
+    // // Write h_deltaT to a file
+    // deltatfile = std::ofstream("deltaT_fine_output.txt");
+    // for (int j = 0; j < ny[0]; ++j) {
+    //     for (int i = 0; i < nx[0]; ++i) {
+    //         deltatfile << h_deltaT[j * nx[0] + i] << " ";
+    //     }
+    //     deltatfile << std::endl;
+    // }
+    // deltatfile.close();
 
     for (int ismooth=0; ismooth < 10; ismooth++) {
         gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, nx[0], ny[0]);
