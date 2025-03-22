@@ -465,7 +465,7 @@ int main() {
     // cudaDeviceSynchronize();
 
 
-    h_deltaT = new double[nx[0] * ny[0]];
+    double* h_deltaT = new double[nx[0] * ny[0]];
     // cudaMemcpy(h_deltaT, deltaT[0], nx[0] * ny[0] * sizeof(double), cudaMemcpyDeviceToHost);
 
     // // Write h_deltaT to a file
