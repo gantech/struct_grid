@@ -454,6 +454,13 @@ int main() {
         cudaDeviceSynchronize();
     }
 
+    // Compute the residual of the linear system of equations at this level
+    compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, Rlin[0], nx[0], ny[0]);
+    cudaDeviceSynchronize();
+
+    glob_resid = std::sqrt(thrust::transform_reduce(t_r0, t_r0 + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
+    std::cout << "Finest level linear residual after V-cycle = " << glob_resid << std::endl;
+    
     update<<<grid_size[0], block_size>>>(T, deltaT[0], nx[0], ny[0], dx, dy);
     cudaDeviceSynchronize();
 
