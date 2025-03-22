@@ -283,7 +283,6 @@ int main() {
     cudaMalloc(&T, nx_f * ny_f * sizeof(double));
     double * nlr;
     cudaMalloc(&nlr, nx_f * ny_f * sizeof(double));
-    thrust::device_ptr<double> t_nlr(nlr);
 
     std::vector<double*> deltaT(nlevels), J(nlevels), R(nlevels), Rlin(nlevels);
     for (int i = 0; i < nlevels; i++) {
@@ -306,6 +305,7 @@ int main() {
     compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
     cudaDeviceSynchronize();
     double glob_resid = 0.0;
+    thrust::device_ptr<double> t_nlr(nlr);
     glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
     std::cout << "Starting residual with const 300.0 field = " << glob_resid << std::endl;
 
