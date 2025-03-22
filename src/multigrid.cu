@@ -347,7 +347,7 @@ int main() {
 
     // Write 1 V-cycle of multigrid
 
-    for (int iloop = 0; iloop < 1; iloop++) {
+    for (int iloop = 0; iloop < 10; iloop++) {
     std::cout << "Loop = " << iloop << std::endl;
     
     // Downstroke of V-cycle
