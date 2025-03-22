@@ -316,6 +316,35 @@ int main() {
     glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
     std::cout << "Starting residual with correct solution field T = 300.0 + x^2 + (y/3)^3 = " << glob_resid << std::endl;    
 
+
+    double *h_R = new double[nx * ny];
+    cudaMemcpy(h_R, nlr, nx * ny * sizeof(double), cudaMemcpyDeviceToHost);
+
+    // Write h_R to a file 
+    std::ofstream outfile("output.txt");
+    for (int j = 0; j < ny; ++j) {
+        for (int i = 0; i < nx; ++i) {
+            outfile << h_R[j * nx + i] << " ";
+        }
+        outfile << std::endl;
+    }
+    outfile.close();
+    delete[] h_R;
+
+    double *h_T = new double[nx * ny];
+    cudaMemcpy(h_T, T, nx * ny * sizeof(double), cudaMemcpyDeviceToHost);
+
+    // Write h_T to a file
+    std::ofstream tfile("temperature_output.txt");
+    for (int j = 0; j < ny; ++j) {
+        for (int i = 0; i < nx; ++i) {
+            tfile << h_T[j * nx + i] << " ";
+        }
+        tfile << std::endl;
+    }
+    tfile.close();
+    delete[] h_T;    
+
     // // Compute Jacobian directly on second level. Won't match the restriction for the matrix. 
     // double *T2;
     // cudaMalloc(&T2, nx[1]*ny[1] * sizeof(double));
