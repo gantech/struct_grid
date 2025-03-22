@@ -465,7 +465,7 @@ int main() {
     // cudaDeviceSynchronize();
 
 
-    // h_deltaT = new double[nx[0] * ny[0]];
+    h_deltaT = new double[nx[0] * ny[0]];
     // cudaMemcpy(h_deltaT, deltaT[0], nx[0] * ny[0] * sizeof(double), cudaMemcpyDeviceToHost);
 
     // // Write h_deltaT to a file
@@ -482,18 +482,18 @@ int main() {
         gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, nx[0], ny[0]);
         cudaDeviceSynchronize();
     }
-    
-    // cudaMemcpy(h_deltaT, deltaT[0], nx[0] * ny[0] * sizeof(double), cudaMemcpyDeviceToHost);
-    // deltatfile = std::ofstream("deltaT_fine_aftersmooth_output.txt");
-    // for (int j = 0; j < ny[0]; ++j) {
-    //     for (int i = 0; i < nx[0]; ++i) {
-    //         deltatfile << h_deltaT[j * nx[0] + i] << " ";
-    //     }
-    //     deltatfile << std::endl;
-    // }
-    // deltatfile.close();    
 
-    // delete[] h_deltaT;
+    cudaMemcpy(h_deltaT, deltaT[0], nx[0] * ny[0] * sizeof(double), cudaMemcpyDeviceToHost);
+    std::ofstream deltatfile = std::ofstream("deltaT_fine_aftersmooth_output.txt");
+    for (int j = 0; j < ny[0]; ++j) {
+        for (int i = 0; i < nx[0]; ++i) {
+            deltatfile << h_deltaT[j * nx[0] + i] << " ";
+        }
+        deltatfile << std::endl;
+    }
+    deltatfile.close();    
+
+    delete[] h_deltaT;
 
     // Compute the residual of the linear system of equations at this level
     compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, Rlin[0], nx[0], ny[0]);
