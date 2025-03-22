@@ -305,8 +305,8 @@ int main() {
 
     compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
     cudaDeviceSynchronize();
-    glob_resid = 0.0;
-    double glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
+    double glob_resid = 0.0;
+    glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
     std::cout << "Starting residual with const 300.0 field = " << glob_resid << std::endl;
 
     initialize_ref<<<grid_size[0], block_size>>>(T, nx[0], ny[0], dx, dy);
