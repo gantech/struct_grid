@@ -347,7 +347,7 @@ int main() {
 
     // Write 1 V-cycle of multigrid
 
-    for (int iloop = 0; iloop < 80; iloop++) {
+    for (int iloop = 0; iloop < 1; iloop++) {
     std::cout << "Loop = " << iloop << std::endl;
     
     // Downstroke of V-cycle
@@ -420,6 +420,20 @@ int main() {
         // cudaDeviceSynchronize();
     }
 
+    double *h_deltaT = new double[nx[nlevels-1] * ny[nlevels-1]];
+    cudaMemcpy(h_deltaT, deltaT[nlevels-1], nx[nlevels-1] * ny[nlevels-1] * sizeof(double), cudaMemcpyDeviceToHost);
+
+    // Write h_deltaT to a file
+    std::ofstream deltatfile("deltaT_coarse_output.txt");
+    for (int j = 0; j < ny[nlevels-1]; ++j) {
+        for (int i = 0; i < nx[nlevels-1]; ++i) {
+            deltatfile << h_T[j * nx[nlevels-1] + i] << " ";
+        }
+        deltatfile << std::endl;
+    }
+    deltatfile.close();
+    delete[] h_deltaT;
+
     // Upstroke of V-cycle - This should end on the finest level (ilevel = 0)
     for (int ilevel = nlevels - 2; ilevel > 0; ilevel--) {
         // Prolongate the error
@@ -449,10 +463,37 @@ int main() {
 
     prolongate_error<<<grid_size[1], block_size>>>(deltaT[1], deltaT[0], nx[1], ny[1], nx[0], ny[0]);
     cudaDeviceSynchronize();
+
+
+    double *h_deltaT = new double[nx[0] * ny[0]];
+    cudaMemcpy(h_deltaT, deltaT[0], nx[0] * ny[0] * sizeof(double), cudaMemcpyDeviceToHost);
+
+    // Write h_deltaT to a file
+    std::ofstream deltatfile("deltaT_fine_output.txt");
+    for (int j = 0; j < ny[0]; ++j) {
+        for (int i = 0; i < nx[0]; ++i) {
+            deltatfile << h_T[j * nx[0] + i] << " ";
+        }
+        deltatfile << std::endl;
+    }
+    deltatfile.close();
+
     for (int ismooth=0; ismooth < 10; ismooth++) {
         gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, nx[0], ny[0]);
         cudaDeviceSynchronize();
     }
+    cudaMemcpy(h_deltaT, deltaT[0], nx[0] * ny[0] * sizeof(double), cudaMemcpyDeviceToHost);
+
+    deltatfile = std::ofstream("deltaT_fine_aftersmooth_output.txt");
+    for (int j = 0; j < ny[0]; ++j) {
+        for (int i = 0; i < nx[0]; ++i) {
+            deltatfile << h_T[j * nx[0] + i] << " ";
+        }
+        deltatfile << std::endl;
+    }
+    deltatfile.close();    
+
+    delete[] h_deltaT;
 
     // Compute the residual of the linear system of equations at this level
     compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, Rlin[0], nx[0], ny[0]);
@@ -460,14 +501,14 @@ int main() {
 
     glob_resid = std::sqrt(thrust::transform_reduce(t_r0, t_r0 + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
     std::cout << "Finest level linear residual after V-cycle = " << glob_resid << std::endl;
-    
+
     update<<<grid_size[0], block_size>>>(T, deltaT[0], nx[0], ny[0], dx, dy);
     cudaDeviceSynchronize();
 
     compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
     cudaDeviceSynchronize();
     glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
-    std::cout << "Ending residual = " << glob_resid << std::endl;    
+    std::cout << "Ending residual = " << glob_resid << std::endl;
 
     }
 
