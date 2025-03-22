@@ -347,7 +347,7 @@ int main() {
 
     // Write 1 V-cycle of multigrid
 
-    for (int iloop = 0; iloop < 80; iloop++) {
+    for (int iloop = 0; iloop < 1; iloop++) {
     std::cout << "Loop = " << iloop << std::endl;
     
     // Downstroke of V-cycle
@@ -427,11 +427,11 @@ int main() {
         prolongate_error<<<grid_size[ilevel+1], block_size>>>(deltaT[ilevel+1], deltaT[ilevel], nx[ilevel+1], ny[ilevel+1], nx[ilevel], ny[ilevel]);
         cudaDeviceSynchronize();
 
-        // Do some more smoothing at this level to reduce the error
-        for (int ismooth = 0; ismooth < 10; ismooth++) {
-            gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
-            cudaDeviceSynchronize();
-        }
+        // // Do some more smoothing at this level to reduce the error
+        // for (int ismooth = 0; ismooth < 10; ismooth++) {
+        //     gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+        //     cudaDeviceSynchronize();
+        // }
 
         compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
         cudaDeviceSynchronize();
