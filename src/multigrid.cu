@@ -472,7 +472,7 @@ int main() {
     deltatfile = std::ofstream("deltaT_fine_output.txt");
     for (int j = 0; j < ny[0]; ++j) {
         for (int i = 0; i < nx[0]; ++i) {
-            deltatfile << h_T[j * nx[0] + i] << " ";
+            deltatfile << h_deltaT[j * nx[0] + i] << " ";
         }
         deltatfile << std::endl;
     }
@@ -487,7 +487,7 @@ int main() {
     deltatfile = std::ofstream("deltaT_fine_aftersmooth_output.txt");
     for (int j = 0; j < ny[0]; ++j) {
         for (int i = 0; i < nx[0]; ++i) {
-            deltatfile << h_T[j * nx[0] + i] << " ";
+            deltatfile << h_deltaT[j * nx[0] + i] << " ";
         }
         deltatfile << std::endl;
     }
