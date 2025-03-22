@@ -9,7 +9,7 @@
 #include <thrust/device_vector.h>
 
 #define TILE_SIZE 32
-#define TILE_SIZE_ADI 2
+#define TILE_SIZE_ADI 1
 
 // Kernel function for initialization - No tiling or shared memory
 __global__ void initialize(double *T, int nx, int ny, double dx, double dy);
@@ -405,12 +405,12 @@ int main() {
     dim3 grid_size_adiy(ceil(nx[nlevels-1] / (double)TILE_SIZE_ADI), 1, 1);
 
     for (int ismooth = 0; ismooth < 10; ismooth++) {
-        gauss_seidel<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+        // gauss_seidel<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+        // cudaDeviceSynchronize();
+        adi_x<<<grid_size_adix, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
         cudaDeviceSynchronize();
-        // adi_x<<<grid_size_adix, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-        // cudaDeviceSynchronize();
-        // adi_y<<<grid_size_adiy, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-        // cudaDeviceSynchronize();
+        adi_y<<<grid_size_adiy, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+        cudaDeviceSynchronize();
         compute_lin_resid<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], Rlin[nlevels-1], nx[nlevels-1], ny[nlevels-1]);        
         cudaDeviceSynchronize();
         // thrust::device_ptr<double> t_linr(Rlin[nlevels-1]);
