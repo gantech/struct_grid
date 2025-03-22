@@ -321,24 +321,24 @@ int main() {
     cudaMemcpy(h_R, nlr, nx * ny * sizeof(double), cudaMemcpyDeviceToHost);
 
     // Write h_R to a file 
-    std::ofstream outfile("output.txt");
-    for (int j = 0; j < ny; ++j) {
-        for (int i = 0; i < nx; ++i) {
-            outfile << h_R[j * nx + i] << " ";
+    std::ofstream outfile("residual.txt");
+    for (int j = 0; j < ny_f; ++j) {
+        for (int i = 0; i < nx_f; ++i) {
+            outfile << h_R[j * nx_f + i] << " ";
         }
         outfile << std::endl;
     }
     outfile.close();
     delete[] h_R;
 
-    double *h_T = new double[nx * ny];
-    cudaMemcpy(h_T, T, nx * ny * sizeof(double), cudaMemcpyDeviceToHost);
+    double *h_T = new double[nx_f * ny_f];
+    cudaMemcpy(h_T, T, nx_f * ny_f * sizeof(double), cudaMemcpyDeviceToHost);
 
     // Write h_T to a file
     std::ofstream tfile("temperature_output.txt");
-    for (int j = 0; j < ny; ++j) {
-        for (int i = 0; i < nx; ++i) {
-            tfile << h_T[j * nx + i] << " ";
+    for (int j = 0; j < ny_f; ++j) {
+        for (int i = 0; i < nx_f; ++i) {
+            tfile << h_T[j * nx_f + i] << " ";
         }
         tfile << std::endl;
     }
