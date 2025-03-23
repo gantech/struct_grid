@@ -116,7 +116,7 @@ __global__ void restrict_resid(double * rc, double * rf, int nxc, int nyc, int n
     int idx_rf4 = (2 * (jc + 1) * nxf) + (2 * ic + 1);
 
     if ( (ic < nxc) && (jc < nyc) ) 
-        rc[idx_rc] = (rf[idx_rf1] + rf[idx_rf2] + rf[idx_rf3] + rf[idx_rf4])/std::sqrt(2.0);
+        rc[idx_rc] = (rf[idx_rf1] + rf[idx_rf2] + rf[idx_rf3] + rf[idx_rf4]);//std::sqrt(2.0);
 
 }
 
@@ -137,10 +137,10 @@ __global__ void prolongate_error(double * deltaTc, double * deltaTf, int nxc, in
     if ( (ic < nxc) && (jc < nyc) ) {
 
         //printf("Prolongating (i,j), idx_rc = %d, %d, %d deltaT = %e, idx_rf1 = %d, idx_rf2 = %d, idx_rf3 = %d, idx_rf4 = %d \n", ic, jc, idx_rc, deltaTc[idx_rc], idx_rf1, idx_rf2, idx_rf3, idx_rf4);
-        deltaTf[idx_rf1] += 0.9*deltaTc[idx_rc]/std::sqrt(2.0);
-        deltaTf[idx_rf2] += 0.9*deltaTc[idx_rc]/std::sqrt(2.0);
-        deltaTf[idx_rf3] += 0.9*deltaTc[idx_rc]/std::sqrt(2.0);
-        deltaTf[idx_rf4] += 0.9*deltaTc[idx_rc]/std::sqrt(2.0);
+        deltaTf[idx_rf1] += 0.9*deltaTc[idx_rc];//std::sqrt(2.0);
+        deltaTf[idx_rf2] += 0.9*deltaTc[idx_rc];//std::sqrt(2.0);
+        deltaTf[idx_rf3] += 0.9*deltaTc[idx_rc];//std::sqrt(2.0);
+        deltaTf[idx_rf4] += 0.9*deltaTc[idx_rc];//std::sqrt(2.0);
         
     }    
 
@@ -164,11 +164,11 @@ __global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, 
     if ( (i < nxc) && (j < nyc) ) {
 
         // Diagonals and Interlinks of the 4 cells
-        double j0 = 0.5*(jf[idx_jf1] + jf[idx_jf2] + jf[idx_jf3] + jf[idx_jf4]    + jf[idx_jf1+2] + jf[idx_jf1+4]    + jf[idx_jf2+1] + jf[idx_jf2+4]    + jf[idx_jf3+3] + jf[idx_jf3+2]    + jf[idx_jf4+1] + jf[idx_jf4+3]);
-        double j1 = 0.5*(jf[idx_jf1+1] + jf[idx_jf3+1]);
-        double j2 = 0.5*(jf[idx_jf2+2] + jf[idx_jf4+2]);
-        double j3 = 0.5*(jf[idx_jf1+3] + jf[idx_jf2+3]);
-        double j4 = 0.5*(jf[idx_jf3+4] + jf[idx_jf4+4]);
+        double j0 = (jf[idx_jf1] + jf[idx_jf2] + jf[idx_jf3] + jf[idx_jf4]    + jf[idx_jf1+2] + jf[idx_jf1+4]    + jf[idx_jf2+1] + jf[idx_jf2+4]    + jf[idx_jf3+3] + jf[idx_jf3+2]    + jf[idx_jf4+1] + jf[idx_jf4+3]);
+        double j1 = (jf[idx_jf1+1] + jf[idx_jf3+1]);
+        double j2 = (jf[idx_jf2+2] + jf[idx_jf4+2]);
+        double j3 = (jf[idx_jf1+3] + jf[idx_jf2+3]);
+        double j4 = (jf[idx_jf3+4] + jf[idx_jf4+4]);
 
         // printf("i = %d, j = %d, j0 = %e, jc0 = %e, j1 = %e, jc1 = %e, j2 = %e, jc2 = %e, j3 = %e, jc3 = %e, j4 = %e, jc4 = %e \n", i, j, j0, jc[idx_jc], j1, jc[idx_jc+1], j2, jc[idx_jc+2], j3, jc[idx_jc+3], j4, jc[idx_jc+4]);
         
