@@ -338,7 +338,7 @@ int main() {
     dim3 block_size_adi(TILE_SIZE_ADI, 1,1);
     dim3 grid_size_adiy(ceil(nx[nlevels-1] / (double)TILE_SIZE_ADI), 1, 1);
 
-    for (int ismooth = 0; ismooth < 100; ismooth++) {
+    for (int ismooth = 0; ismooth < 10; ismooth++) {
 
         compute_lin_resid<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], Rlin[nlevels-1], nx[nlevels-1], ny[nlevels-1]);        
         cudaDeviceSynchronize();
