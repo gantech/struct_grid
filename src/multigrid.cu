@@ -115,11 +115,8 @@ __global__ void restrict_resid(double * rc, double * rf, int nxc, int nyc, int n
     int idx_rf3 = (2 * jc + 1) * nxf + (2 * ic);
     int idx_rf4 = (2 * jc + 1) * nxf + (2 * ic + 1);
 
-    if ( (ic < nxc) && (jc < nyc) ) {
+    if ( (ic < nxc) && (jc < nyc) ) 
         rc[idx_rc] = (rf[idx_rf1] + rf[idx_rf2] + rf[idx_rf3] + rf[idx_rf4]);//std::sqrt(2.0);
-        if (std::abs(rc[idx_rc]) > 1e-6)
-            printf("%d %d %e %e %e %e %e - idxs - %d %d %d %d %d \n", ic, jc, rf[idx_rf1], rf[idx_rf2], rf[idx_rf3], rf[idx_rf4], rc[idx_rc], idx_rf1, idx_rf2, idx_rf3, idx_rf4, idx_rc);
-    }
 
 }
 
@@ -351,7 +348,7 @@ int main() {
 
     // Write 1 V-cycle of multigrid
 
-    for (int iloop = 0; iloop < 1; iloop++) {
+    for (int iloop = 0; iloop < 10; iloop++) {
     std::cout << "Loop = " << iloop << std::endl;
     
     // Downstroke of V-cycle
@@ -375,13 +372,13 @@ int main() {
         cudaDeviceSynchronize();
     }
 
-    // // // Compute the residual of the linear system of equations at this level
-    // compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, Rlin[0], nx[0], ny[0]);
-    // cudaDeviceSynchronize();
+    // // Compute the residual of the linear system of equations at this level
+    compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, Rlin[0], nx[0], ny[0]);
+    cudaDeviceSynchronize();
 
     thrust::device_ptr<double> t_r0(Rlin[0]);
-    // glob_resid = std::sqrt(thrust::transform_reduce(t_r0, t_r0 + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
-    // std::cout << "Finest level linear residual after smoothing = " << glob_resid << std::endl;
+    glob_resid = std::sqrt(thrust::transform_reduce(t_r0, t_r0 + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
+    std::cout << "Finest level linear residual after smoothing = " << glob_resid << std::endl;
 
     // for (int ilevel = 1; ilevel < nlevels-1; ilevel++) {
     //     // Restrict the residual of the linear system
