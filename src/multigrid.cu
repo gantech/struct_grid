@@ -330,8 +330,10 @@ int main() {
         
         // Perform some smoothing at this level to get the error
         for (int ismooth = 0; ismooth < 10; ismooth++) {
-            jacobi<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+            jacobi<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], deltaT1[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
             cudaDeviceSynchronize();
+            jacobi<<<grid_size[ilevel], block_size>>>(deltaT1[ilevel], deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+            cudaDeviceSynchronize();            
         }
 
         // Compute the residual of the linear system of equations at this level.
@@ -389,8 +391,10 @@ int main() {
             thrust::device_ptr<double> t_linr(Rlin[ilevel]);
             double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
             std::cout << "At coarsest level ismooth = " << ismooth << ", residual before smoothing = " << tmp_resid << std::endl;            
-            jacobi<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+            jacobi<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], deltaT1[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
             cudaDeviceSynchronize();
+            jacobi<<<grid_size[ilevel], block_size>>>(deltaT1[ilevel], deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+            cudaDeviceSynchronize();            
         }
 
         compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
