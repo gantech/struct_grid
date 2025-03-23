@@ -115,8 +115,10 @@ __global__ void restrict_resid(double * rc, double * rf, int nxc, int nyc, int n
     int idx_rf3 = (2 * (jc + 1) * nxf) + (2 * ic);
     int idx_rf4 = (2 * (jc + 1) * nxf) + (2 * ic + 1);
 
-    if ( (ic < nxc) && (jc < nyc) ) 
+    if ( (ic < nxc) && (jc < nyc) ) {
         rc[idx_rc] = (rf[idx_rf1] + rf[idx_rf2] + rf[idx_rf3] + rf[idx_rf4]);//std::sqrt(2.0);
+        printf("%d %d %e %e %e %e %e \n", ic, jc, rf[idx_rf1], rf[idx_rf2], rf[idx_rf3], rf[idx_rf4], rc[idx_rc]);
+    }
 
 }
 
@@ -348,7 +350,7 @@ int main() {
 
     // Write 1 V-cycle of multigrid
 
-    for (int iloop = 0; iloop < 10; iloop++) {
+    for (int iloop = 0; iloop < 1; iloop++) {
     std::cout << "Loop = " << iloop << std::endl;
     
     // Downstroke of V-cycle
