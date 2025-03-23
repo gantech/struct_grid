@@ -2,7 +2,7 @@
 #include <fstream>
 #include <cmath>
 #include <cuda_runtime.h>
-#include <thrust/reduce.h>
+#include <thrust/transform_reduce.h>
 #include <thrust/device_vector.h>
 
 #define TILE_SIZE 32
@@ -11,163 +11,29 @@
 #define NNY 384
 
 // Kernel function for initialization - No tiling or shared memory
-__global__ void initialize(double *T, int nx, int ny, double dx, double dy) {
-
-    int row = blockIdx.x * blockDim.x + threadIdx.x;
-    int col = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if ((row < nx) && (col < ny)) {
-        double y = (0.5 + col) * dy;
-        double x = (0.5 + row) * dx;
-        T[(col * nx) + row] = 300.0 ;//+ x*x + (y*y*y)/ 27.0;
-    }
-    
-}
+__global__ void initialize(double *T, int nx, int ny, double dx, double dy);
 
 // Kernel function for update - No tiling or shared memory
-__global__ void update(double *T, double *deltaT, int nx, int ny, double dx, double dy) {
-
-    int row = blockIdx.x * blockDim.x + threadIdx.x;
-    int col = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if ((row < nx) && (col < ny)) {
-        double y = (0.5 + col) * dy;
-        double x = (0.5 + row) * dx;
-        T[(col * nx) + row] += deltaT[(col * nx) + row];
-    }
-    
-}
+__global__ void update(double *T, double *deltaT, int nx, int ny, double dx, double dy);
 
 // Kernel function for calculation of Jacobian and Residual - No tiling or shared memory
-__global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, double dx, double dy, double kc) {
-
-    int row = blockIdx.x * blockDim.x + threadIdx.x;
-    int col = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if ((row < nx) && (col < ny)) {
-        
-        double y = (0.5 + col) * dy;
-        double x = (0.5 + row) * dx;
-        int idx_r = (col * nx) + row;
-        int idx_j = idx_r * 5;
-
-        double jij = -4.0;
-        double jip1j = 1.0;
-        double jim1j = 1.0;
-        double jijp1 = 1.0;
-        double jijm1 = 1.0;
-
-        double tip1j = 0.0;
-        double tim1j = 0.0;
-        double tijp1 = 0.0;
-        double tijm1 = 0.0;
-
-        double radd = 0.0;
-        if (row == 0) {
-            jij -= 2.0;
-            jip1j += 0.3333333333333333 ;
-            jim1j -= 1.0;
-            tip1j = T[idx_r + 1];
-            double t_bc_left = 300.0 + (y*y*y/27.0);
-            radd += kc * 8.0 * t_bc_left / 3.0 ;
-        } else if (row == (nx - 1)) {
-            jij += 1.0;
-            jip1j -= 1.0;
-            tim1j = T[idx_r - 1];
-            radd += 2.0 * kc * dy;
-        } else {
-            tip1j = T[idx_r + 1];
-            tim1j = T[idx_r - 1];
-        }
-
-        if (col == 0) {
-            jij -= 2.0;
-            jijp1 += 0.3333333333333333;
-            jijm1 -= 1.0;
-            tijp1 = T[idx_r + nx];
-            double t_bc_bot = 300.0 + (x*x);
-            radd += kc * 8.0 * t_bc_bot / 3.0;
-        } else if (col == (ny - 1)) {
-            jij += 1.0;
-            jijp1 -= 1.0;
-            tijm1 = T[idx_r - nx];
-            radd += kc * dx;
-        } else {
-            tijm1 = T[idx_r - nx];
-            tijp1 = T[idx_r + nx];
-        }
-
-        // Write to residual
-        double tmp = kc * ( jijm1 * tijm1 + jijp1 * tijp1 + jim1j * tim1j + jip1j * tip1j + jij * T[idx_r] + (2.0 + 2.0 * y / 9.0) * dx * dy) + radd;
-
-        // if (std::abs(tmp/(dx * dy * kc)) > 20.0) {
-        //     printf("Row, Col is %d, %d - x,y = %f, %f, Residuals - %f, %f, J - (j-1) %f, (j+1) %f, (i-1) %f, (i+1) %f, (ij) %f, T - (j-1) %f, (j+1) %f, (i-1) %f, (i+1) %f, (ij) %f \n", row, col, x, y, 2.0 - 2.0 * y / 9.0, tmp / (dx * dy * kc), jijm1, jijp1, jim1j, jip1j, jij, tijm1, tijp1, tim1j, tip1j, T[idx_r]);
-        // }
-
-        R[idx_r] = tmp;
-
-        // Write to the Jacobian
-        J[idx_j] = jij * kc; //i,j
-        J[idx_j + 1] = jim1j * kc; //i-1,j
-        J[idx_j + 2] = jip1j * kc; //i+1,j
-        J[idx_j + 3] = jijm1 * kc; //i,j-1
-        J[idx_j + 4] = jijp1 * kc; //i,j+1
-    }
-}
+__global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, double dx, double dy, double kc);
 
 // Kernel function for calculation of Residual - No tiling or shared memory
-__global__ void compute_r(double *T, double * J, double *R, int nx, int ny, double dx, double dy, double kc) {
+__global__ void compute_r(double *T, double * J, double *R, int nx, int ny, double dx, double dy, double kc) ;
 
-    int row = blockIdx.x * blockDim.x + threadIdx.x;
-    int col = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if ((row < nx) && (col < ny)) {
-        
-        double y = (0.5 + col) * dy;
-        double x = (0.5 + row) * dx;
-        int idx_r = (col * nx) + row;
-        int idx_j = idx_r * 5;
-
-        double jij = J[idx_j];
-        double jim1j = J[idx_j + 1];
-        double jip1j = J[idx_j + 2];
-        double jijm1 = J[idx_j + 3];
-        double jijp1 = J[idx_j + 4];
-
-        double tip1j = 0.0;
-        double tim1j = 0.0;
-        double tijp1 = 0.0;
-        double tijm1 = 0.0;
-
-        double radd = 0.0;
-        if (row == 0) {
-            tip1j = T[idx_r + 1];
-            double t_bc_left = 300.0 + (y*y*y/27.0);
-            radd += kc * 8.0 * t_bc_left / 3.0 ;
-        } else if (row == (nx - 1)) {
-            tim1j = T[idx_r - 1];
-            radd += 2.0 * kc * dy;
-        } else {
-            tip1j = T[idx_r + 1];
-            tim1j = T[idx_r - 1];
-        }
-
-        if (col == 0) {
-            tijp1 = T[idx_r + nx];
-            double t_bc_bot = 300.0 + (x*x);
-            radd += kc * 8.0 * t_bc_bot / 3.0;
-        } else if (col == (ny - 1)) {
-            tijm1 = T[idx_r - nx];
-            radd += kc * dx;
-        } else {
-            tijm1 = T[idx_r - nx];
-            tijp1 = T[idx_r + nx];
-        }
-
-        // Write to residual
-        R[idx_r] = kc * ( jijm1 * tijm1 + jijp1 * tijp1 + jim1j * tim1j + jip1j * tip1j + jij * T[idx_r] + (2.0 + 2.0 * y / 9.0) * dx * dy) + radd;
+// Functor to square the elements
+struct square {
+    __device__ double operator()(double a) {
+        return a * a;
     }
-}
+};
+
+// Kernel function for Thomas solves in the X direction - part of ADI 
+__global__ void adi_x(double *T, double *J, double *R, int nx, int ny);
+
+// Kernel function for Thomas solves in the Y direction - part of ADI 
+__global__ void adi_y(double *T, double *J, double *R, int nx, int ny);
 
 
 // Kernel function for calculation of Residual - No tiling or shared memory
@@ -210,138 +76,12 @@ __global__ void jacobi_iter(double *T, double *deltaT, double *J, double *R, int
         //     tijp1 = deltaT[idx_r + nx];
         // }
 
-        // T[idx_r] += 0.9*(-R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
-        T[idx_r] -= 0.9 * (R[idx_r])/jij;
+        // T[idx_r] += 0.9*(R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
+        T[idx_r] += 0.9 * (R[idx_r])/jij;
     }
 }
 
-// Kernel function for Thomas solves in the X direction - part of ADI - No tiling or shared memory
-// Directly update the solution
-__global__ void adi_x(double *T, double *J, double *R, int nx, int ny) {
 
-    //extern __shared__ double sharedMemory[];
-
-    __shared__ double sharedMemory[5 * TILE_SIZE_ADI * NNX];
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    // printf("BlockIdx - %d, ThreadIdx - %d, Col is %d\n", blockIdx.x, threadIdx.x, col);
-
-    double * a = sharedMemory + threadIdx.x * 5 * nx;
-    double * b = a + nx;
-    double * c = b + nx;
-    double * d = c + nx;
-    double * x = d + nx;
-
-    if (col < ny) {
-
-        for (int i=0; i < nx; i++) {
-
-            int idx_r = (col * nx) + i;
-            int idx_j = idx_r * 5;
-    
-            a[i] = J[idx_j + 1];
-            b[i] = J[idx_j];
-            c[i] = J[idx_j + 2];
-            d[i] = -R[idx_r];
-
-            // if (col == 0) {
-            //     printf("Row, Col, idx_r is %d, %d, %d - a %e, b %e, c %e, d %e\n", i, col, idx_r, a[i], b[i], c[i], d[i]);
-            // }
-        }
-    }
-
-    __syncthreads();
-
-    if (col < ny) {
-
-        // Forward substitution
-        for (int i=1; i < nx; i++) {
-            double w = a[i] / b[i-1];
-            b[i] = b[i] - w * c[i-1];
-            d[i] = d[i] - w * d[i-1];
-        }
-
-
-
-        // Backward substitution
-        x[nx-1] = d[nx-1] / b[nx-1];
-        
-        for (int i = nx-2; i > -1; i--) {
-            x[i] = (d[i] - c[i] * x[i+1]) / b[i];
-        }
-
-        // if (col == 0) {
-        //     for (int i=0; i < nx; i++) {
-        //         printf("Row, Col is %d, %d - a %e, b %e, c %e, d %e, x %e\n", i, col, a[i], b[i], c[i], d[i], x[i]);
-        //     }
-        // }        
-
-        // Update solution back T
-        for (int i=0; i < nx; i++) {
-            int idx_r = (col * nx) + i;
-            T[idx_r] = T[idx_r] + x[i];
-        }
-
-    }
-
-}
-
-// Kernel function for Thomas solves in the Y direction - part of ADI - No tiling or shared memory
-// Directly update the solution
-__global__ void adi_y(double *T, double *J, double *R, int nx, int ny) {
-
-    //extern __shared__ double sharedMemory[];
-
-    __shared__ double sharedMemory[5 * TILE_SIZE_ADI * NNY];
-    int row = blockIdx.x * blockDim.x + threadIdx.x;
-    // printf("BlockIdx - %d, ThreadIdx - %d, Row is %d\n", blockIdx.x, threadIdx.x, row);
-
-    double * a = sharedMemory + threadIdx.x * 5 * ny;
-    double * b = a + ny;
-    double * c = b + ny;
-    double * d = c + ny;
-    double * x = d + ny;
-
-    if (row < nx) {
-
-        for (int j=0; j < ny; j++) {
-
-            int idx_r = (j * nx) + row;
-            int idx_j = idx_r * 5;
-    
-            a[j] = J[idx_j + 3];
-            b[j] = J[idx_j];
-            c[j] = J[idx_j + 4];
-            d[j] = -R[idx_r];
-        }
-    }
-
-    __syncthreads();
-
-    if (row < nx) {
-
-        // Forward substitution
-        for (int j=1; j < ny; j++) {
-            double w = a[j] / b[j-1];
-            b[j] = b[j] - w * c[j-1];
-            d[j] = d[j] - w * d[j-1];
-        }
-
-        // Backward substitution
-        x[ny-1] = d[ny-1] / b[ny-1];
-        
-        for (int j = ny-2; j > -1; j--) {
-            x[j] = (d[j] - c[j] * x[j+1]) / b[j];
-        }
-
-        // Update solution back T
-        for (int j=0; j < ny; j++) {
-            int idx_r = (j * nx) + row;
-            T[idx_r] = T[idx_r] + x[j];
-        }
-
-    }
-
-}
 
 
 int main() {
@@ -382,34 +122,36 @@ int main() {
     cudaEventRecord(start,0);
 
 
-    // Call the Jacobi iteration 1000 times
-    for (int i = 0; i < 100000; ++i) {
-    // std::cout << "Iteration: " << i << std::endl;
-        jacobi_iter<<<grid_size, block_size>>>(T, deltaT, J, R, nx, ny, dx, dy, kc);
-        // update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
-        compute_r<<<grid_size, block_size>>>(T, R, nx, ny, dx, dy, kc);
+    // // Call the Jacobi iteration 1000 times
+    // for (int i = 0; i < 100000; ++i) {
+    // // std::cout << "Iteration: " << i << std::endl;
+    //     jacobi_iter<<<grid_size, block_size>>>(T, deltaT, J, R, nx, ny, dx, dy, kc);
+    //     // update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
+    //     compute_r<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
 
-        double glob_resid = thrust::reduce(t_res, t_res + nx * ny, 0.0, thrust::plus<double>());
-        std::cout << "Iter = " << i << ", Residual = " << glob_resid << std::endl;        
-    }
-    update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
+    //     double glob_resid = std::sqrt(thrust::transform_reduce(t_res, t_res + nx * ny, square(), 0.0, thrust::plus<double>()));
+    //     std::cout << "Iter = " << i << ", Residual = " << glob_resid << std::endl;        
+    // }
+    // update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
 
     dim3 grid_size_adix(ceil(ny / (double)TILE_SIZE_ADI), 1, 1);
     dim3 block_size_adi(TILE_SIZE_ADI, 1,1);
     dim3 grid_size_adiy(ceil(nx / (double)TILE_SIZE_ADI), 1, 1);
 
-    // for (int i = 0; i < 10000; i++) {
-    //     //adi_x<<<grid_size_adix, block_size_adi, (5*nx*TILE_SIZE_ADI*sizeof(double))>>>(T, J, R, nx, ny);
-    //     adi_x<<<grid_size_adix, block_size_adi>>>(T, J, R, nx, ny);
-    //     compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
+    for (int i = 0; i < 10000; i++) {
+        //adi_x<<<grid_size_adix, block_size_adi, (5*nx*TILE_SIZE_ADI*sizeof(double))>>>(T, J, R, nx, ny);
+        adi_x<<<grid_size_adix, block_size_adi>>>(deltaT, J, R, nx, ny);
+        update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
+        compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
 
-    //     //adi_y<<<grid_size_adiy, block_size_adi, (5*ny*TILE_SIZE_ADI*sizeof(double))>>>(T, J, R, nx, ny);
-    //     adi_y<<<grid_size_adiy, block_size_adi>>>(T, J, R, nx, ny);
-    //     compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
+        //adi_y<<<grid_size_adiy, block_size_adi, (5*ny*TILE_SIZE_ADI*sizeof(double))>>>(T, J, R, nx, ny);
+        adi_y<<<grid_size_adiy, block_size_adi>>>(deltaT, J, R, nx, ny);
+        update<<<grid_size, block_size>>>(T, deltaT, nx, ny, dx, dy);
+        compute_r_j<<<grid_size, block_size>>>(T, J, R, nx, ny, dx, dy, kc);
 
-    //     double glob_resid = thrust::reduce(t_res, t_res + nx * ny, 0.0, thrust::plus<double>());
-    //     std::cout << "Iter = " << i << ", Residual = " << glob_resid << std::endl;
-    // }
+        double glob_resid = std::sqrt(thrust::transform_reduce(t_res, t_res + nx * ny, square(), 0.0, thrust::plus<double>()));
+        std::cout << "Iter = " << i << ", Residual = " << glob_resid << std::endl;
+    }
 
     cudaDeviceSynchronize();
 
