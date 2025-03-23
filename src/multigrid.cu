@@ -376,7 +376,7 @@ int main() {
     // compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, Rlin[0], nx[0], ny[0]);
     // cudaDeviceSynchronize();
 
-    // thrust::device_ptr<double> t_r0(Rlin[0]);
+    thrust::device_ptr<double> t_r0(Rlin[0]);
     // glob_resid = std::sqrt(thrust::transform_reduce(t_r0, t_r0 + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
     // std::cout << "Finest level linear residual after smoothing = " << glob_resid << std::endl;
 
