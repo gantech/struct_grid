@@ -228,8 +228,8 @@ __global__ void jacobi(double *deltaT, double * deltaT1, double *J, double *R, i
 int main() {
 
     // Finest level problem size
-    int nx_f = 128*16;
-    int ny_f = 384*16;
+    int nx_f = 128*32;
+    int ny_f = 384*32;
 
     // Need resolution only on the finest grid to assemble the equations
     double dx = 1.0 / double(nx_f);
@@ -238,7 +238,7 @@ int main() {
     double kc = 0.01;
 
     // Number of levels in multigrid - each refined in all directions by a factor of 2
-    int nlevels = 9; 
+    int nlevels = 10; 
     std::vector<int> nx(nlevels);
     std::vector<int> ny(nlevels);
     for (int i = 0; i < nlevels; i++) {
