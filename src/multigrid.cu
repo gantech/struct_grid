@@ -118,7 +118,7 @@ __global__ void restrict_resid(double * rc, double * rf, int nxc, int nyc, int n
     if ( (ic < nxc) && (jc < nyc) ) {
         rc[idx_rc] = (rf[idx_rf1] + rf[idx_rf2] + rf[idx_rf3] + rf[idx_rf4]);//std::sqrt(2.0);
         if (std::abs(rc[idx_rc]) > 1e-6)
-            printf("%d %d %e %e %e %e %e \n", ic, jc, rf[idx_rf1], rf[idx_rf2], rf[idx_rf3], rf[idx_rf4], rc[idx_rc]);
+            printf("%d %d %e %e %e %e %e - idxs - %d %d %d %d %d \n", ic, jc, rf[idx_rf1], rf[idx_rf2], rf[idx_rf3], rf[idx_rf4], rc[idx_rc], idx_rf1, idx_rf2, idx_rf3, idx_rf4, idx_rc);
     }
 
 }
