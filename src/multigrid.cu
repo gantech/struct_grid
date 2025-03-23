@@ -112,8 +112,8 @@ __global__ void restrict_resid(double * rc, double * rf, int nxc, int nyc, int n
     int idx_rc = (jc * nxc) + ic;
     int idx_rf1 = (2 * jc * nxf) + (2 * ic);
     int idx_rf2 = (2 * jc * nxf) + (2 * ic + 1);
-    int idx_rf3 = (2 * (jc + 1) * nxf) + (2 * ic);
-    int idx_rf4 = (2 * (jc + 1) * nxf) + (2 * ic + 1);
+    int idx_rf3 = (2 * jc + 1) * nxf + (2 * ic);
+    int idx_rf4 = (2 * jc + 1) * nxf + (2 * ic + 1);
 
     if ( (ic < nxc) && (jc < nyc) ) {
         rc[idx_rc] = (rf[idx_rf1] + rf[idx_rf2] + rf[idx_rf3] + rf[idx_rf4]);//std::sqrt(2.0);
@@ -134,8 +134,8 @@ __global__ void prolongate_error(double * deltaTc, double * deltaTf, int nxc, in
     int idx_rc = (jc * nxc) + ic;
     int idx_rf1 = (2 * jc * nxf) + (2 * ic);
     int idx_rf2 = (2 * jc * nxf) + (2 * ic + 1);
-    int idx_rf3 = (2 * (jc + 1) * nxf) + (2 * ic);
-    int idx_rf4 = (2 * (jc + 1) * nxf) + (2 * ic + 1);
+    int idx_rf3 = (2 * jc + 1) * nxf + (2 * ic);
+    int idx_rf4 = (2 * jc + 1) * nxf + (2 * ic + 1);
 
     if ( (ic < nxc) && (jc < nyc) ) {
 
@@ -161,8 +161,8 @@ __global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, 
     int idx_jc = ((j * nxc) + i) * 5;
     int idx_jf1 = ((2 * j * nxf) + (2 * i)) * 5;
     int idx_jf2 = ((2 * j * nxf) + (2 * i + 1)) * 5;
-    int idx_jf3 = ((2 * (j + 1) * nxf) + (2 * i)) * 5;
-    int idx_jf4 = ((2 * (j + 1) * nxf) + (2 * i + 1)) * 5;
+    int idx_jf3 = ((2 * j + 1) * nxf + (2 * i)) * 5;
+    int idx_jf4 = ((2 * j + 1) * nxf + (2 * i + 1)) * 5;
 
     if ( (i < nxc) && (j < nyc) ) {
 
