@@ -164,49 +164,18 @@ __global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, 
     if ( (i < nxc) && (j < nyc) ) {
 
         // Diagonals and Interlinks of the 4 cells
-        double j0 = (jf[idx_jf1] + jf[idx_jf2] + jf[idx_jf3] + jf[idx_jf4]    + jf[idx_jf1+2] + jf[idx_jf1+4]    + jf[idx_jf2+1] + jf[idx_jf2+4]    + jf[idx_jf3+3] + jf[idx_jf3+2]    + jf[idx_jf4+1] + jf[idx_jf4+3]);
-        double j1 = (jf[idx_jf1+1] + jf[idx_jf3+1]);
-        double j2 = (jf[idx_jf2+2] + jf[idx_jf4+2]);
-        double j3 = (jf[idx_jf1+3] + jf[idx_jf2+3]);
-        double j4 = (jf[idx_jf3+4] + jf[idx_jf4+4]);
-
-        // printf("i = %d, j = %d, j0 = %e, jc0 = %e, j1 = %e, jc1 = %e, j2 = %e, jc2 = %e, j3 = %e, jc3 = %e, j4 = %e, jc4 = %e \n", i, j, j0, jc[idx_jc], j1, jc[idx_jc+1], j2, jc[idx_jc+2], j3, jc[idx_jc+3], j4, jc[idx_jc+4]);
+        jc[idx_jc] = (jf[idx_jf1] + jf[idx_jf2] + jf[idx_jf3] + jf[idx_jf4]    + jf[idx_jf1+2] + jf[idx_jf1+4]    + jf[idx_jf2+1] + jf[idx_jf2+4]    + jf[idx_jf3+3] + jf[idx_jf3+2]    + jf[idx_jf4+1] + jf[idx_jf4+3]);
+        jc[idx_jc+1] = (jf[idx_jf1+1] + jf[idx_jf3+1]);
+        jc[idx_jc+2] = (jf[idx_jf2+2] + jf[idx_jf4+2]);
+        jc[idx_jc+3] = (jf[idx_jf1+3] + jf[idx_jf2+3]);
+        jc[idx_jc+4] = (jf[idx_jf3+4] + jf[idx_jf4+4]);
         
-        jc[idx_jc]= j0;
-        jc[idx_jc+1]= j1;
-        jc[idx_jc+2]= j2;
-        jc[idx_jc+3]= j3;
-        jc[idx_jc+4]= j4;
-        
-
-        // if ( std::abs(j0 - 2.0 * jc[idx_jc]) > 1.0e-5) {
-        //     printf("i = %d, j = %d, j0 = %e, jc0 = %e, j0f components = %e, %e, %e, %e, %e, %e, %e, %e, %e, %e, %e, %e \n", i, j, j0, jc[idx_jc], jf[idx_jf1] , jf[idx_jf2] , jf[idx_jf3] , jf[idx_jf4], jf[idx_jf1+2] , jf[idx_jf1+4] , jf[idx_jf2+1] , jf[idx_jf2+4] , jf[idx_jf3+3] , jf[idx_jf3+2] , jf[idx_jf4+1] , jf[idx_jf4+3] );
-        // }
-
-        // if ( std::abs(j1 - 2.0 * jc[idx_jc+1]) > 1.0e-5) {
-        //     printf("i = %d, j = %d, j1 = %e, jc1 = %e, j1f components = %e, %e \n", i, j, j1, jc[idx_jc+1], jf[idx_jf1+1] , jf[idx_jf3+1]);
-        // }
-
-        // if ( std::abs(j2 - 2.0 * jc[idx_jc+2]) > 1.0e-5) {
-        //     printf("i = %d, j = %d, j2 = %e, jc2 = %e, j2f components = %e, %e \n", i, j, j2, jc[idx_jc+2], jf[idx_jf2+2] , jf[idx_jf4+2]);
-        // }
-
-        // if ( std::abs(j3 - 2.0 * jc[idx_jc+3]) > 1.0e-5) {
-        //     printf("i = %d, j = %d, j3 = %e, jc3 = %e, j3f components = %e, %e \n", i, j, j3, jc[idx_jc+3], jf[idx_jf1+3] , jf[idx_jf2+3]);
-        // }
-
-        // if ( std::abs(j4 - 2.0 * jc[idx_jc+4]) > 1.0e-5) {
-        //     printf("i = %d, j = %d, j4 = %e, jc4 = %e, j4f components = %e, %e \n", i, j, j4, jc[idx_jc+4], jf[idx_jf3+4] , jf[idx_jf4+4]);
-        // }
-
-        // printf("nxc = %d, nyc = %d, i = %d, j = %d, j = %e, %e, %e, %e, %e \n", nxc, nyc, i, j, jc[idx_jc], jc[idx_jc+1], jc[idx_jc+2], jc[idx_jc+3], jc[idx_jc+4]);
-
     }
 
 }
 
 // Kernel function for Gauss-Seidel smoother - No tiling or shared memory
-__global__ void gauss_seidel(double *deltaT, double * deltaT1, double *J, double *R, int nx, int ny) {
+__global__ void jacobi(double *deltaT, double * deltaT1, double *J, double *R, int nx, int ny) {
 
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -309,21 +278,6 @@ int main() {
     thrust::device_ptr<double> t_nlr(nlr);
     glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
     std::cout << "Starting residual with const 300.0 field = " << glob_resid << std::endl;
-
-    // initialize_ref<<<grid_size[0], block_size>>>(T, nx[0], ny[0], dx, dy);
-    // cudaDeviceSynchronize();
-
-    // compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
-    // cudaDeviceSynchronize();
-    // glob_resid = 0.0;
-    // glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
-    // std::cout << "Starting residual with correct solution field T = 300.0 + x^2 + (y/3)^3 = " << glob_resid << std::endl;    
-
-    // // Compute Jacobian directly on second level. Won't match the restriction for the matrix. 
-    // double *T2;
-    // cudaMalloc(&T2, nx[1]*ny[1] * sizeof(double));
-    // compute_r_j<<<grid_size[1], block_size>>>(T2, J[1], R[1], nx[1], ny[1], 2.0 * dx, 2.0 * dy, kc);
-    // cudaDeviceSynchronize();
     
     // Compute the Jacobian matrix at the coarser levels 
     for (int ilevel = 1; ilevel < nlevels; ilevel++) {
@@ -331,20 +285,6 @@ int main() {
         restrict_j<<<grid_size[ilevel], block_size>>>(J[ilevel], J[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
         cudaDeviceSynchronize();
     }
-
-
-    // double * h_Jc = new double(nx[nlevels-1] * ny[nlevels-1] * 5);
-    // cudaMemcpy(h_Jc, J[nlevels-1], nx[nlevels-1] * ny[nlevels-1] * 5 * sizeof(double), cudaMemcpyDeviceToHost);
-
-    // std::ofstream myfile;
-    // myfile.open("Jcoarse.txt");
-    // for (int j = 0; j < ny[nlevels-1]; j++) {
-    //     for (int i = 0; i < nx[nlevels-1]; i++) {
-    //         int idx_j = (j * nx[nlevels-1]) + i;
-    //         myfile << "i,j = " << i <<  " " << j << " " << h_Jc[idx_j] << " " << h_Jc[idx_j + 1] << " " << h_Jc[idx_j + 2] << " " << h_Jc[idx_j + 3] << " " << h_Jc[idx_j + 4] << std::endl;
-    //     }
-    // }
-    // myfile.close();
 
     // Write 1 V-cycle of multigrid
 
@@ -366,9 +306,9 @@ int main() {
     
     // Do some smoothing on the finest level first
     for (int ismooth = 0; ismooth < 10; ismooth++) {
-        gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], deltaT1[0], J[0], nlr, nx[0], ny[0]);
+        jacobi<<<grid_size[0], block_size>>>(deltaT[0], deltaT1[0], J[0], nlr, nx[0], ny[0]);
         cudaDeviceSynchronize();
-        gauss_seidel<<<grid_size[0], block_size>>>(deltaT1[0], deltaT[0], J[0], nlr, nx[0], ny[0]);
+        jacobi<<<grid_size[0], block_size>>>(deltaT1[0], deltaT[0], J[0], nlr, nx[0], ny[0]);
         cudaDeviceSynchronize();
     }
 
@@ -390,7 +330,7 @@ int main() {
         
     //     // Perform some smoothing at this level to get the error
     //     for (int ismooth = 0; ismooth < 10; ismooth++) {
-    //         gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+    //         jacobi<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
     //         cudaDeviceSynchronize();
     //     }
 
@@ -422,9 +362,9 @@ int main() {
         double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[nlevels-1] * ny[nlevels-1], square(), 0.0, thrust::plus<double>()));
         std::cout << "At coarsest level ismooth = " << ismooth << ", residual after smoothing = " << tmp_resid << std::endl;
 
-        gauss_seidel<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], deltaT1[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+        jacobi<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], deltaT1[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
         cudaDeviceSynchronize();  
-        gauss_seidel<<<grid_size[nlevels-1], block_size>>>(deltaT1[nlevels-1], deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+        jacobi<<<grid_size[nlevels-1], block_size>>>(deltaT1[nlevels-1], deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
         cudaDeviceSynchronize();                      
         // adi_x<<<grid_size_adix, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
         // cudaDeviceSynchronize();
@@ -432,19 +372,6 @@ int main() {
         // cudaDeviceSynchronize();
     }
 
-    // double *h_deltaT = new double[nx[nlevels-1] * ny[nlevels-1]];
-    // cudaMemcpy(h_deltaT, deltaT[nlevels-1], nx[nlevels-1] * ny[nlevels-1] * sizeof(double), cudaMemcpyDeviceToHost);
-
-    // // Write h_deltaT to a file
-    // std::ofstream deltatfile("deltaT_coarse_output.txt");
-    // for (int j = 0; j < ny[nlevels-1]; ++j) {
-    //     for (int i = 0; i < nx[nlevels-1]; ++i) {
-    //         deltatfile << h_deltaT[j * nx[nlevels-1] + i] << " ";
-    //     }
-    //     deltatfile << std::endl;
-    // }
-    // deltatfile.close();
-    // delete[] h_deltaT;
 
     // // Upstroke of V-cycle - This should end on the finest level (ilevel = 0)
     // for (int ilevel = nlevels - 2; ilevel > 0; ilevel--) {
@@ -461,7 +388,7 @@ int main() {
     //         thrust::device_ptr<double> t_linr(Rlin[ilevel]);
     //         double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[ilevel] * ny[ilevel], square(), 0.0, thrust::plus<double>()));
     //         std::cout << "At coarsest level ismooth = " << ismooth << ", residual before smoothing = " << tmp_resid << std::endl;            
-    //         gauss_seidel<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
+    //         jacobi<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
     //         cudaDeviceSynchronize();
     //     }
 
@@ -476,37 +403,12 @@ int main() {
     prolongate_error<<<grid_size[1], block_size>>>(deltaT[1], deltaT[0], nx[1], ny[1], nx[0], ny[0]);
     cudaDeviceSynchronize();
 
-    double* h_deltaT = new double[nx[0] * ny[0]];
-    // cudaMemcpy(h_deltaT, deltaT[0], nx[0] * ny[0] * sizeof(double), cudaMemcpyDeviceToHost);
-
-    // // Write h_deltaT to a file
-    // deltatfile = std::ofstream("deltaT_fine_output.txt");
-    // for (int j = 0; j < ny[0]; ++j) {
-    //     for (int i = 0; i < nx[0]; ++i) {
-    //         deltatfile << h_deltaT[j * nx[0] + i] << " ";
-    //     }
-    //     deltatfile << std::endl;
-    // }
-    // deltatfile.close();
-
     for (int ismooth=0; ismooth < 10; ismooth++) {
-        gauss_seidel<<<grid_size[0], block_size>>>(deltaT[0], deltaT1[0], J[0], nlr, nx[0], ny[0]);
+        jacobi<<<grid_size[0], block_size>>>(deltaT[0], deltaT1[0], J[0], nlr, nx[0], ny[0]);
         cudaDeviceSynchronize();
-        gauss_seidel<<<grid_size[0], block_size>>>(deltaT1[0], deltaT[0], J[0], nlr, nx[0], ny[0]);
+        jacobi<<<grid_size[0], block_size>>>(deltaT1[0], deltaT[0], J[0], nlr, nx[0], ny[0]);
         cudaDeviceSynchronize();        
     }
-
-    cudaMemcpy(h_deltaT, deltaT[0], nx[0] * ny[0] * sizeof(double), cudaMemcpyDeviceToHost);
-    std::ofstream deltatfile = std::ofstream("deltaT_fine_aftersmooth_output.txt");
-    for (int j = 0; j < ny[0]; ++j) {
-        for (int i = 0; i < nx[0]; ++i) {
-            deltatfile << h_deltaT[j * nx[0] + i] << " ";
-        }
-        deltatfile << std::endl;
-    }
-    deltatfile.close();    
-
-    delete[] h_deltaT;
 
     // Compute the residual of the linear system of equations at this level
     compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, Rlin[0], nx[0], ny[0]);
