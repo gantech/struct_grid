@@ -228,8 +228,8 @@ __global__ void jacobi(double *deltaT, double * deltaT1, double *J, double *R, i
 int main() {
 
     // Finest level problem size
-    int nx_f = 128;
-    int ny_f = 384;
+    int nx_f = 128*8;
+    int ny_f = 384*8;
 
     // Need resolution only on the finest grid to assemble the equations
     double dx = 1.0 / double(nx_f);
@@ -238,7 +238,7 @@ int main() {
     double kc = 0.01;
 
     // Number of levels in multigrid - each refined in all directions by a factor of 2
-    int nlevels = 4; 
+    int nlevels = 8; 
     std::vector<int> nx(nlevels);
     std::vector<int> ny(nlevels);
     for (int i = 0; i < nlevels; i++) {
@@ -352,12 +352,12 @@ int main() {
     double tmp_resid = std::sqrt(thrust::transform_reduce(t_r, t_r + nx[nlevels-1] * ny[nlevels-1], square(), 0.0, thrust::plus<double>()));
     std::cout << "At level ilev = " << nlevels-1 << ", restricted residual = " << tmp_resid << std::endl;    
 
-    // // Do bottom level solve with ADI 
-    // dim3 grid_size_adix(ceil(ny[nlevels-1] / (double)TILE_SIZE_ADI), 1, 1);
-    // dim3 block_size_adi(TILE_SIZE_ADI, 1,1);
-    // dim3 grid_size_adiy(ceil(nx[nlevels-1] / (double)TILE_SIZE_ADI), 1, 1);
+    // Do bottom level solve with ADI 
+    dim3 grid_size_adix(ceil(ny[nlevels-1] / (double)TILE_SIZE_ADI), 1, 1);
+    dim3 block_size_adi(TILE_SIZE_ADI, 1,1);
+    dim3 grid_size_adiy(ceil(nx[nlevels-1] / (double)TILE_SIZE_ADI), 1, 1);
 
-    for (int ismooth = 0; ismooth < 10; ismooth++) {
+    for (int ismooth = 0; ismooth < 100; ismooth++) {
 
         compute_lin_resid<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], Rlin[nlevels-1], nx[nlevels-1], ny[nlevels-1]);        
         cudaDeviceSynchronize();
@@ -365,14 +365,14 @@ int main() {
         double tmp_resid = std::sqrt(thrust::transform_reduce(t_linr, t_linr + nx[nlevels-1] * ny[nlevels-1], square(), 0.0, thrust::plus<double>()));
         std::cout << "At coarsest level ismooth = " << ismooth << ", residual after smoothing = " << tmp_resid << std::endl;
 
-        jacobi<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], deltaT1[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-        cudaDeviceSynchronize();  
-        jacobi<<<grid_size[nlevels-1], block_size>>>(deltaT1[nlevels-1], deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-        cudaDeviceSynchronize();                      
-        // adi_x<<<grid_size_adix, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-        // cudaDeviceSynchronize();
-        // adi_y<<<grid_size_adiy, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-        // cudaDeviceSynchronize();
+        // jacobi<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], deltaT1[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+        // cudaDeviceSynchronize();  
+        // jacobi<<<grid_size[nlevels-1], block_size>>>(deltaT1[nlevels-1], deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+        // cudaDeviceSynchronize();                      
+        adi_x<<<grid_size_adix, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+        cudaDeviceSynchronize();
+        adi_y<<<grid_size_adiy, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
+        cudaDeviceSynchronize();
     }
 
 
