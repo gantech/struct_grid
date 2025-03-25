@@ -7,7 +7,7 @@ namespace JacobiNS {
 
     __global__ void jacobi_kernel(double * deltaT, double * deltaT1, double * J, double * R, int nx, int ny);
 
-    class Jacobi: public LinearSolver::LinearSolver {
+    class Jacobi: public LinearSolverNS::LinearSolver {
 
         public:
 
