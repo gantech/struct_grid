@@ -47,7 +47,7 @@ namespace LaplaceHeat {
 
 
     __host__ void LaplaceHeat::initialize_const(double val) {
-        LaplaceHeat::initialize_const<<<grid_size_1d, block_size_1d>>>(T, val, nx, ny, dx, dy);
+        LaplaceHeat::initialize_const<<<grid_size_1d, block_size_1d>>>(T, val, nx, ny);
         cudaDeviceSynchronize();
     }
 
