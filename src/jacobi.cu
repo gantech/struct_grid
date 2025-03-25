@@ -1,4 +1,4 @@
-namespace LinearSolvers {
+namespace Jacobi {
 
 // Kernel function for Jacobi smoother - No tiling or shared memory
 __global__ void jacobi_kernel(double *deltaT, double * deltaT1, double *J, double *R, int nx, int ny) {

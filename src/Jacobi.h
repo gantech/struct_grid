@@ -3,11 +3,11 @@
 #include "LinearSolvers.h"
 #include <cuda_runtime.h>
 
-namespace LinearSolvers {
+namespace Jacobi {
 
     __global__ void jacobi_kernel(double * deltaT, double * deltaT1, double * J, double * R, int nx, int ny);
 
-    class Jacobi: public LinearSolvers {
+    class Jacobi: public LinearSolvers::LinearSolvers {
 
         public:
 
