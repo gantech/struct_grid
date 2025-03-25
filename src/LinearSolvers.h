@@ -7,7 +7,7 @@ namespace LinearSolvers {
     class LinearSolvers {
         public:
             // Constructor
-            void LinearSolvers(int nxinp, int nyinp, 
+            LinearSolvers(int nxinp, int nyinp, 
                 double * Jinp, double *Tinp, double *deltaTinp, double *Rinp);
 
             // Destructor
