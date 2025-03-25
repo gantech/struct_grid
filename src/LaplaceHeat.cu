@@ -47,36 +47,36 @@ namespace LaplaceHeatNS {
 
 
     __host__ void LaplaceHeat::initialize_const(double val) {
-        LaplaceHeat::initialize_const<<<grid_size_1d, block_size_1d>>>(T, val, nx, ny);
+        LaplaceHeatNS::initialize_const<<<grid_size_1d, block_size_1d>>>(T, val, nx, ny);
         cudaDeviceSynchronize();
     }
 
     __host__ void LaplaceHeat::initialize_ref() {
-        LaplaceHeat::initialize_ref<<<grid_size_1d, block_size_1d>>>(T, nx, ny, dx, dy);
+        LaplaceHeatNS::initialize_ref<<<grid_size_1d, block_size_1d>>>(T, nx, ny, dx, dy);
         cudaDeviceSynchronize();
     }
 
     __host__ void LaplaceHeat::update() {
-        LaplaceHeat::update<<<grid_size_1d, block_size_1d>>>(T, deltaT, nx, ny);
+        LaplaceHeatNS::update<<<grid_size_1d, block_size_1d>>>(T, deltaT, nx, ny);
         cudaDeviceSynchronize();
     }
 
     __host__ double LaplaceHeat::compute_r_j() {
-        LaplaceHeat::compute_r_j<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy);        
+        LaplaceHeatNS::compute_r_j<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy);        
         cudaDeviceSynchronize();
         thrust::device_ptr<double> t_nlr(nlr);
         return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));        
     }
 
     __host__ void LaplaceHeat::compute_r() {
-        LaplaceHeat::compute_r<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy);
+        LaplaceHeatNS::compute_r<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy);
         cudaDeviceSynchronize();
         thrust::device_ptr<double> t_nlr(nlr);
         return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));              
     }
 
     __host__ void LaplaceHeat::compute_matvec(double * v, double * result) {
-        LaplaceHeat::compute_matvec<<<grid_size, block_size>>>(v, J, result, nx, ny);
+        LaplaceHeatNS::compute_matvec<<<grid_size, block_size>>>(v, J, result, nx, ny);
         cudaDeviceSynchronize();
     }
 
