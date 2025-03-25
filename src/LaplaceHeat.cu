@@ -14,7 +14,7 @@ namespace LaplaceHeat {
         }
     };
 
-    void LaplaceHeat(int nx_inp, int ny_inp, double kc_inp) {
+    LaplaceHeat::LaplaceHeat(int nx_inp, int ny_inp, double kc_inp) {
 
         nx = nx_inp;
         ny = ny_inp;
@@ -36,7 +36,7 @@ namespace LaplaceHeat {
         
     }
 
-    ~LaplaceHeat() {
+    LaplaceHeat::~LaplaceHeat() {
 
         // Free memory
         cudaFree(T);

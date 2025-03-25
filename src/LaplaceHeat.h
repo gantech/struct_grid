@@ -32,7 +32,7 @@ class LaplaceHeat {
 public:
 
     // Constructor
-    void LaplaceHeat(int nx, int ny, double kc);
+    LaplaceHeat(int nx, int ny, double kc);
 
     // Destructor
     ~LaplaceHeat();
