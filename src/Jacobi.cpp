@@ -2,14 +2,14 @@
 
 namespace JacobiNS {
 
-    Jacobi::Jacobi(int nx, int ny, double * J, double *T, double *deltaT, double *R):
+    Jacobi(int nx, int ny, double * J, double *T, double *deltaT, double *R):
     LinearSolvers::LinearSolvers(nx, ny, J, T, deltaT, R)
     {
         cudaMalloc(&deltaT1, nx * ny * sizeof(double));
 
     }
 
-    ~Jacobi::Jacobi()
+    ~Jacobi()
     {
 
         cudaFree(deltaT1);
