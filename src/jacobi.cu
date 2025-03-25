@@ -42,6 +42,8 @@ __global__ void jacobi_kernel(double *deltaT, double * deltaT1, double *J, doubl
 
         deltaT1[idx_r] = (R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
         
-}
+    } 
 
 }
+
+} 
