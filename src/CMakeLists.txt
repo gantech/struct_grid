@@ -21,7 +21,7 @@ cuda_add_library(linear_solvers STATIC LinearSolver.cpp Jacobi.cu)
 set_target_properties(linear_solvers PROPERTIES CUDA_ARCHITECTURES "90")
 install(TARGETS linear_solvers DESTINATION lib)
 
-cuda_add_executable(laplace_heat_jacobi LaplaceHeat.cu laplace_heat.cu)
+cuda_add_executable(laplace_heat_jacobi LaplaceHeat.cu)
 set_target_properties(laplace_heat_jacobi PROPERTIES CUDA_ARCHITECTURES "90")
 target_link_libraries(laplace_heat_jacobi linear_solvers)
 install(TARGETS laplace_heat_jacobi DESTINATION bin)
