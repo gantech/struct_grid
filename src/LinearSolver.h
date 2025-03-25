@@ -11,7 +11,7 @@ namespace LinearSolverNS {
                 double * Jinp, double *Tinp, double *deltaTinp, double *Rinp);
 
             // Destructor
-            ~LinearSolver();
+            ~LinearSolver() {}
 
             // Take 1 solver step
             __host__ virtual void solve_step() = 0;
