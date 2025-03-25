@@ -62,14 +62,14 @@ namespace LaplaceHeatNS {
     }
 
     __host__ double LaplaceHeat::compute_r_j() {
-        LaplaceHeatNS::compute_r_j<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy);        
+        LaplaceHeatNS::compute_r_j<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy, kc);        
         cudaDeviceSynchronize();
         thrust::device_ptr<double> t_nlr(nlr);
         return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));        
     }
 
     __host__ double LaplaceHeat::compute_r() {
-        LaplaceHeatNS::compute_r<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy);
+        LaplaceHeatNS::compute_r<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy, kc);
         cudaDeviceSynchronize();
         thrust::device_ptr<double> t_nlr(nlr);
         return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));              
