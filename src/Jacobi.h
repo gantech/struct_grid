@@ -1,6 +1,6 @@
 #ifndef JACOBI
 #define JACOBI
-#include "Jacobi.h"
+#include "LinearSolvers.h"
 #include <cuda_runtime.h>
 
 namespace Jacobi {
