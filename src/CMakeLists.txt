@@ -19,4 +19,7 @@
 
 cuda_add_library(linear_solvers STATIC LinearSolvers.cpp Jacobi.cpp jacobi.cu)
 set_target_properties(linear_solvers PROPERTIES CUDA_ARCHITECTURES "90")
+# Force nvcc for the .cpp file
+set_target_properties(linear_solvers PROPERTIES CUDA_SOURCE_FILE_EXTENSIONS ".cpp"
+)
 install(TARGETS linear_solvers DESTINATION lib)
