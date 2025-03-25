@@ -4,7 +4,7 @@
 #include "LinearSolver.h"
 #include "Jacobi.h"
 
-namespace LaplaceHeat {
+namespace LaplaceHeatNS {
 
 // Kernel function for initialization - No tiling or shared memory
 __global__ void initialize_const(double *T, double val, int nx, int ny);
