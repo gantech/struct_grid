@@ -213,7 +213,7 @@ __global__ void compute_matvec(double * v, double * J, double * result, int nx, 
             vijp1 = v[idx_r + nx];
         }
 
-        result[idx_r] = jim1j * tim1j + jip1j * tip1j + jijm1 * tijm1 + jijp1 * tijp1 + jij * v[idx_r];
+        result[idx_r] = jim1j * vim1j + jip1j * vip1j + jijm1 * vijm1 + jijp1 * vijp1 + jij * v[idx_r];
     }
 }
 
