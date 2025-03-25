@@ -1,13 +1,18 @@
+namespace LaplaceHeat {
+
+
+
 // Kernel function for initialization - No tiling or shared memory
 __global__ void initialize(double *T, int nx, int ny, double dx, double dy) {
 
-    int row = blockIdx.x * blockDim.x + threadIdx.x;
-    int col = blockIdx.y * blockDim.y + threadIdx.y;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if ((row < nx) && (col < ny)) {
+    if (idx < (nx * ny)) {
+        int row = idx % nx;
+        int col = idx / nx;
         double y = (0.5 + col) * dy;
         double x = (0.5 + row) * dx;
-        T[(col * nx) + row] = 300.0 ;//+ x*x + (y*y*y)/ 27.0;
+        T[idx] = 300.0 ;//+ x*x + (y*y*y)/ 27.0;
     }
     
 }
@@ -15,10 +20,11 @@ __global__ void initialize(double *T, int nx, int ny, double dx, double dy) {
 // Kernel function for initialization - No tiling or shared memory
 __global__ void initialize_ref(double *T, int nx, int ny, double dx, double dy) {
 
-    int row = blockIdx.x * blockDim.x + threadIdx.x;
-    int col = blockIdx.y * blockDim.y + threadIdx.y;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if ((row < nx) && (col < ny)) {
+    if (idx < (nx * ny)) {
+        int row = idx % nx;
+        int col = idx / nx;
         double y = (0.5 + col) * dy;
         double x = (0.5 + row) * dx;
         T[(col * nx) + row] = 300.0 + x*x + (y*y*y)/ 27.0;
@@ -26,17 +32,13 @@ __global__ void initialize_ref(double *T, int nx, int ny, double dx, double dy) 
     
 }
 // Kernel function for update - No tiling or shared memory
-__global__ void update(double *T, double *deltaT, int nx, int ny, double dx, double dy) {
+__global__ void update(double *T, double *deltaT, int nx, int ny) {
 
-    int row = blockIdx.x * blockDim.x + threadIdx.x;
-    int col = blockIdx.y * blockDim.y + threadIdx.y;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if ((row < nx) && (col < ny)) {
-        double y = (0.5 + col) * dy;
-        double x = (0.5 + row) * dx;
-        T[(col * nx) + row] += deltaT[(col * nx) + row];
-    }
-    
+    if (idx < (nx * ny)) 
+        T[idx] += deltaT[idx];
+
 }
 
 // Kernel function for calculation of Jacobian and Residual - No tiling or shared memory
@@ -174,4 +176,54 @@ __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, doub
         // Write to residual
         R[idx_r] = -kc * ( jijm1 * tijm1 + jijp1 * tijp1 + jim1j * tim1j + jip1j * tip1j + jij * T[idx_r] - (2.0 + 2.0 * y / 9.0) * dx * dy) - radd;
     }
+}
+
+
+// Kernel to compute matrix vector product of the linear system of equations J * v . 
+__global__ void compute_matvec(double * v, double * J, double * result, int nx, int ny) {
+
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
+
+    int idx_r = (j * nx) + i;
+    int idx_j = idx_r * 5;
+
+    if ( (i < nx) && (j < ny)) {
+
+        double jij = J[idx_j];
+        double jim1j = J[idx_j + 1];
+        double jip1j = J[idx_j + 2];
+        double jijm1 = J[idx_j + 3];
+        double jijp1 = J[idx_j + 4];
+
+        double vip1j = 0.0;
+        double vim1j = 0.0;
+        double vijp1 = 0.0;
+        double vijm1 = 0.0;
+
+        if ( i == 0) {
+            vip1j = v[idx_r + 1];
+        } else if ( i == (nx - 1)) {
+            vim1j = v[idx_r - 1];
+        } else {
+            vip1j = v[idx_r + 1];
+            vim1j = v[idx_r - 1];
+        }
+
+        if ( j == 0) {
+            vijp1 = v[idx_r + nx];
+        } else if ( j == (ny - 1)) {
+            vijm1 = v[idx_r - nx];
+        } else {
+            vijm1 = v[idx_r - nx];
+            vijp1 = v[idx_r + nx];
+        }
+
+        result[idx_r] = jim1j * tim1j + jip1j * tip1j + jijm1 * tijm1 + jijp1 * tijp1 + jij * v[idx_r];
+    }
+}
+
+
+
+
 }
