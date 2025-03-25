@@ -1,6 +1,6 @@
 #include "Jacobi.h"
 
-namespace Jacobi {
+namespace LinearSolvers {
 
     Jacobi(int nx, int ny, double * J, double *T, double *deltaT, double *R):
     LinearSolvers(nx, ny, J, T, deltaT, R)
