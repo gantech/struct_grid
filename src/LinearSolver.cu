@@ -1,6 +1,6 @@
 #include "LinearSolver.h"
 #include <cmath>
-namespace LinearSolver {
+namespace LinearSolverNS {
 
     LinearSolver::LinearSolver(int nxinp, int nyinp, double * Jinp, double *Tinp, double *deltaTinp, double *Rinp):
     nx(nxinp), ny(nyinp), J(Jinp), T(Tinp), deltaT(deltaTinp), R(Rinp) {

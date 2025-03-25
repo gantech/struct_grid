@@ -62,7 +62,7 @@ public:
     double * deltaT;
     double * J;
 
-    LinearSolver::LinearSolver * solver;
+    LinearSolverNS::LinearSolver * solver;
 
 private:
 
