@@ -7,11 +7,11 @@ namespace LinearSolvers {
     class LinearSolvers {
         public:
             // Constructor
-            void LinearSolver(int nxinp, int nyinp, 
+            void LinearSolvers(int nxinp, int nyinp, 
                 double * Jinp, double *Tinp, double *deltaTinp, double *Rinp);
 
             // Destructor
-            ~LinearSolver();
+            ~LinearSolvers();
 
             // Take 1 solver step
             virtual void solve_step() __host__ = 0;
