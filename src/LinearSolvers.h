@@ -28,7 +28,7 @@ namespace LinearSolvers {
             dim3 block_size;
         
             dim3 grid_size_1d;
-            dim3 block_size_1d(1024);
+            dim3 block_size_1d = 1024;
         
             
     };
