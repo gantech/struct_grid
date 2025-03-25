@@ -1,17 +1,17 @@
-#ifndef LINEAR_SOLVERS
-#define LINEAR_SOLVERS
+#ifndef LINEAR_SOLVER
+#define LINEAR_SOLVER
 #include <cuda_runtime.h>
 
-namespace LinearSolvers {
+namespace LinearSolver {
 
-    class LinearSolvers {
+    class LinearSolver {
         public:
             // Constructor
-            LinearSolvers(int nxinp, int nyinp, 
+            LinearSolver(int nxinp, int nyinp, 
                 double * Jinp, double *Tinp, double *deltaTinp, double *Rinp);
 
             // Destructor
-            ~LinearSolvers();
+            ~LinearSolver();
 
             // Take 1 solver step
             virtual void solve_step() __host__ = 0;

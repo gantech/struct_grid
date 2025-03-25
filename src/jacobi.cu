@@ -49,7 +49,7 @@ __global__ void jacobi_kernel(double *deltaT, double * deltaT1, double *J, doubl
 }
 
     Jacobi::Jacobi(int nx, int ny, double * J, double *T, double *deltaT, double *R):
-    LinearSolvers::LinearSolvers(nx, ny, J, T, deltaT, R)
+    LinearSolver::LinearSolver(nx, ny, J, T, deltaT, R)
     {
         cudaMalloc(&deltaT1, nx * ny * sizeof(double));
 

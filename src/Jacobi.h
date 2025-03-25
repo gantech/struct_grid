@@ -1,13 +1,13 @@
 #ifndef JACOBI
 #define JACOBI
-#include "LinearSolvers.h"
+#include "LinearSolver.h"
 #include <cuda_runtime.h>
 
 namespace JacobiNS {
 
     __global__ void jacobi_kernel(double * deltaT, double * deltaT1, double * J, double * R, int nx, int ny);
 
-    class Jacobi: public LinearSolvers::LinearSolvers {
+    class Jacobi: public LinearSolver::LinearSolver {
 
         public:
 

@@ -1,6 +1,18 @@
 #include "LaplaceHeat.h"
 
+#include <thrust/reduce.h>
+#include <thrust/transform_reduce.h>
+#include <thrust/functional.h>
+#include <thrust/device_vector.h>
+
 namespace LaplaceHeat {
+
+    // Functor to square the elements
+    struct square {
+        __device__ double operator()(double a) {
+            return a * a;
+        }
+    };
 
     void LaplaceHeat(int nx_inp, int ny_inp, double kc_inp) {
 
@@ -18,8 +30,10 @@ namespace LaplaceHeat {
         grid_size = dim3(nx, ny);
         block_size = dim3(32, 32);
 
-        grid_size_1d = dim3( ceil (nx * ny / 1024.0) );        
+        grid_size_1d = dim3( ceil (nx * ny / 1024.0) );       
 
+        solver = new JacobiNS::Jacobi(nx, ny, J, T, deltaT, nlr);
+        
     }
 
     ~LaplaceHeat() {
@@ -32,8 +46,8 @@ namespace LaplaceHeat {
     }
 
 
-    __host__ void LaplaceHeat::initialize() {
-        LaplaceHeat::initialize<<<grid_size_1d, block_size_1d>>>(T, nx, ny, dx, dy);
+    __host__ void LaplaceHeat::initialize_const(double val) {
+        LaplaceHeat::initialize_const<<<grid_size_1d, block_size_1d>>>(T, val, nx, ny, dx, dy);
         cudaDeviceSynchronize();
     }
 
@@ -47,14 +61,18 @@ namespace LaplaceHeat {
         cudaDeviceSynchronize();
     }
 
-    __host__ void LaplaceHeat::compute_r_j() {
-        LaplaceHeat::compute_r_j<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy);
+    __host__ double LaplaceHeat::compute_r_j() {
+        LaplaceHeat::compute_r_j<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy);        
         cudaDeviceSynchronize();
+        thrust::device_ptr<double> t_nlr(nlr);
+        return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));        
     }
 
     __host__ void LaplaceHeat::compute_r() {
         LaplaceHeat::compute_r<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy);
         cudaDeviceSynchronize();
+        thrust::device_ptr<double> t_nlr(nlr);
+        return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));              
     }
 
     __host__ void LaplaceHeat::compute_matvec(double * v, double * result) {
@@ -62,20 +80,24 @@ namespace LaplaceHeat {
         cudaDeviceSynchronize();
     }
 
+    __host__ void LaplaceHeat::solve(int nsteps) {
+        for (int j = 0; j < nsteps; j++) {
+            solver->solve_step();
+    }
+
 }
 
 
-// int main() {
+int main() {
 
-//     l = LaplaceHeat(128, 384);
-//     l.compute_r_j();
-//     solver = Jacobi()
-//     for (int i = 0; i < 80; i++) {
-//         for (int j = 0; j < 10000; j++) 
-//             l.jacobi();
-//         l.update();
-//         l.compute_r_j();
-//     }
-//     return 0;
+    l = LaplaceHeat(128, 384);
+    l.initialize_const(300.0);
+    double * resid = new double[80];
+    for (int i = 0; i < 80; i++) {
+        resid[i] = l.compute_r_j();
+        l.solve(1000); // Loops of Jacobi
+        l.update();
+    }
+    return 0;
     
-// }
+}

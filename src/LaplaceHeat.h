@@ -1,10 +1,13 @@
 #ifndef LAPLACE_HEAT
 #define LAPLACE_HEAT
 
+#include "LinearSolver.h"
+#include "Jacobi.h"
+
 namespace LaplaceHeat {
 
 // Kernel function for initialization - No tiling or shared memory
-__global__ void initialize(double *T, int nx, int ny, double dx, double dy);
+__global__ void initialize_const(double *T, double val, int nx, int ny, double dx, double dy);
 
 // Kernel function for initialization - No tiling or shared memory
 __global__ void initialize_ref(double *T, int nx, int ny, double dx, double dy);
@@ -34,17 +37,19 @@ public:
     // Destructor
     ~LaplaceHeat();
 
-    __host__ void initialize();
+    __host__ void initialize_const(double val);
 
     __host__ void initialize_ref();
 
     __host__ void update();
 
-    __host__ void compute_r_j();
+    __host__ double compute_r_j();
 
-    __host__ void compute_r();
+    __host__ double compute_r();
 
     __host__ void compute_matvec(double *v, double * result);
+
+    __host__ void solve(int nsteps);
 
     int nx;
     int ny;
@@ -56,6 +61,8 @@ public:
     double * nlr;
     double * deltaT;
     double * J;
+
+    LinearSolver * solver;
 
 private:
 

@@ -1,19 +1,13 @@
 namespace LaplaceHeat {
 
 
-
 // Kernel function for initialization - No tiling or shared memory
-__global__ void initialize(double *T, int nx, int ny, double dx, double dy) {
+__global__ void initialize_const(double *T, double val, int nx, int ny, double dx, double dy) {
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (idx < (nx * ny)) {
-        int row = idx % nx;
-        int col = idx / nx;
-        double y = (0.5 + col) * dy;
-        double x = (0.5 + row) * dx;
-        T[idx] = 300.0 ;//+ x*x + (y*y*y)/ 27.0;
-    }
+    if (idx < (nx * ny)) 
+        T[idx] = val ;
     
 }
 
