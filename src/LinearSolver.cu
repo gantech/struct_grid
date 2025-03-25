@@ -2,7 +2,7 @@
 #include <cmath>
 namespace LinearSolverNS {
 
-    LinearSolver(int nxinp, int nyinp, double * Jinp, double *Tinp, double *deltaTinp, double *Rinp):
+    LinearSolverNS::LinearSolver(int nxinp, int nyinp, double * Jinp, double *Tinp, double *deltaTinp, double *Rinp):
     nx(nxinp), ny(nyinp), J(Jinp), T(Tinp), deltaT(deltaTinp), R(Rinp) {
 
         grid_size = dim3(nx, ny);
