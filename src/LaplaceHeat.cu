@@ -229,7 +229,7 @@ __global__ void compute_matvec(double * v, double * J, double * result, int nx, 
         result[idx_r] = jim1j * vim1j + jip1j * vip1j + jijm1 * vijm1 + jijp1 * vijp1 + jij * v[idx_r];
     }
 }
-    
+
     LaplaceHeat::LaplaceHeat(int nx_inp, int ny_inp, double kc_inp) {
 
         nx = nx_inp;
@@ -313,6 +313,7 @@ int main() {
     double * resid = new double[80];
     for (int i = 0; i < 80; i++) {
         resid[i] = l.compute_r_j();
+        std::cout << "Iter = " << i << "resid = " << resid[i] << std::endl;
         l.solve(1000); // Loops of Jacobi
         l.update();
     }
