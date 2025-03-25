@@ -11,6 +11,7 @@ namespace JacobiNS {
 
     ~Jacobi::Jacobi()
     {
+
         cudaFree(deltaT1);
     }
 
