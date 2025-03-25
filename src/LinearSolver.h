@@ -2,7 +2,7 @@
 #define LINEAR_SOLVER
 #include <cuda_runtime.h>
 
-namespace LinearSolver {
+namespace LinearSolverNS {
 
     class LinearSolver {
         public:
@@ -14,7 +14,7 @@ namespace LinearSolver {
             ~LinearSolver();
 
             // Take 1 solver step
-            virtual void solve_step() __host__ = 0;
+            __host__ virtual void solve_step() = 0;
         
         protected:
             int nx;
