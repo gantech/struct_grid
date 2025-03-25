@@ -7,13 +7,13 @@
 namespace LaplaceHeat {
 
 // Kernel function for initialization - No tiling or shared memory
-__global__ void initialize_const(double *T, double val, int nx, int ny, double dx, double dy);
+__global__ void initialize_const(double *T, double val, int nx, int ny);
 
 // Kernel function for initialization - No tiling or shared memory
 __global__ void initialize_ref(double *T, int nx, int ny, double dx, double dy);
 
 // Kernel function for update - No tiling or shared memory
-__global__ void update(double *T, double *deltaT, int nx, int ny, double dx, double dy);
+__global__ void update(double *T, double *deltaT, int nx, int ny);
 
 // Kernel function for calculation of Jacobian and Residual - No tiling or shared memory
 __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, double dx, double dy, double kc);

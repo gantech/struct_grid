@@ -90,7 +90,7 @@ namespace LaplaceHeat {
 
 int main() {
 
-    l = LaplaceHeat(128, 384);
+    l = LaplaceHeat::LaplaceHeat(128, 384, 0.01);
     l.initialize_const(300.0);
     double * resid = new double[80];
     for (int i = 0; i < 80; i++) {
