@@ -18,7 +18,7 @@ namespace JacobiNS {
             ~Jacobi();
 
             // Solver
-            __host__ void solve_step();
+            __host__ void solve_step() override;
 
 
         private:
