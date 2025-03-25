@@ -1,5 +1,5 @@
 #include "LinearSolvers.h"
-
+#include <cmath>
 namespace LinearSolvers {
 
     LinearSolvers::LinearSolvers(int nxinp, int nyinp, double * Jinp, double *Tinp, double *deltaTinp, double *Rinp):
