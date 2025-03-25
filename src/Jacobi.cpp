@@ -16,9 +16,9 @@ namespace LinearSolvers {
 
     __host__ void Jacobi::solve_step() {
 
-        Jacobi::jacobi_kernel<<<grid_size, block_size>>>(deltaT, deltaT1, J, R, nx, ny);
+        LinearSolvers::jacobi_kernel<<<grid_size, block_size>>>(deltaT, deltaT1, J, R, nx, ny);
         cudaDeviceSynchronize();
-        Jacobi::jacobi_kernel<<<grid_size, block_size>>>(deltaT1, deltaT, J, R, nx, ny);
+        LinearSolvers::jacobi_kernel<<<grid_size, block_size>>>(deltaT1, deltaT, J, R, nx, ny);
         cudaDeviceSynchronize();                
     }
 
