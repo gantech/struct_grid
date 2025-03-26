@@ -335,8 +335,9 @@ int main() {
     std::ofstream resid_file_adi("adi_resid.txt");
     resid_file_adi << "Iter, Residual" << std::endl;
     LaplaceHeatNS::LaplaceHeat * ladi = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "ADI");
-    ladi->initialize_const(300.0);
+    ladi->initialize_const(ladi->T, 300.0);
     for (int i = 0; i < 80; i++) {
+        ladi->initialize_const(ladi->deltaT, 0.0);
         resid[i] = ladi->compute_r_j();
         resid_file_adi << "Iter = " << i << ", " << resid[i] << std::endl;
         ladi->solve(100); // Loops of ADI
