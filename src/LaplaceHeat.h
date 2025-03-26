@@ -4,6 +4,7 @@
 #include <string>
 #include "LinearSolver.h"
 #include "Jacobi.h"
+#include "ADI.h"
 
 namespace LaplaceHeatNS {
 
