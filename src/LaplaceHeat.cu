@@ -317,32 +317,31 @@ int main() {
 
     std::ofstream resid_file_jacobi("jacobi_resid.txt");
     resid_file_jacobi << "Iter, Residual" << std::endl;
-    LaplaceHeatNS::LaplaceHeat l(128, 384, 0.01, "Jaobi");
-    l.initialize_const(300.0);
+    LaplaceHeatNS::LaplaceHeat ljacobi(128, 384, 0.01, "Jaobi");
+    ljacobi.initialize_const(300.0);
     double * resid = new double[80];
     for (int i = 0; i < 80; i++) {
-        resid[i] = l.compute_r_j();
+        resid[i] = ljacobi.compute_r_j();
         resid_file_jacobi << i << ", " << resid[i] << std::endl;
-        l.solve(1000); // Loops of Jacobi
-        l.update();
+        ljacobi.solve(1000); // Loops of Jacobi
+        ljacobi.update();
     }
     resid_file_jacobi.close();
-    delete l;
-
+    delete ljacobi;
 
     std::ofstream resid_file_adi("adi_resid.txt")
     resid_file_adi << "Iter, Residual" << std::endl;
-    LaplaceHeatNS::LaplaceHeat l(128, 384, 0.01, "ADI");
-    l.initialize_const(300.0);
+    LaplaceHeatNS::LaplaceHeat ladi(128, 384, 0.01, "ADI");
+    ladi.initialize_const(300.0);
     double * resid = new double[80];
     for (int i = 0; i < 80; i++) {
-        resid[i] = l.compute_r_j();
+        resid[i] = ladi.compute_r_j();
         resid_file_adi << "Iter = " << i << "resid = " << resid[i] << std::endl;
-        l.solve(100); // Loops of ADI
-        l.update();
+        ladi.solve(100); // Loops of ADI
+        ladi.update();
     }
     resid_file_adi.close();
-    delete l;
+    delete ladi;
 
     return 0;
     
