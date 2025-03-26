@@ -4,15 +4,12 @@
 namespace ADINS {
 
 #define TILE_SIZE_ADI 1
-#define NNX 8
-#define NNY 24
 
 // Kernel function for Thomas solves in the X direction - part of ADI
 __global__ void adi_x(double *T, double *J, double *R, int nx, int ny) {
 
-    //extern __shared__ double sharedMemory[];
+    extern __shared__ double sharedMemory[];
 
-    __shared__ double sharedMemory[5 * TILE_SIZE_ADI * NNX];
     int col = blockIdx.x * blockDim.x + threadIdx.x;
     // printf("BlockIdx - %d, ThreadIdx - %d, Col is %d\n", blockIdx.x, threadIdx.x, col);
 
@@ -95,9 +92,8 @@ __global__ void adi_x(double *T, double *J, double *R, int nx, int ny) {
 // Kernel function for Thomas solves in the Y direction - part of ADI
 __global__ void adi_y(double *T, double *J, double *R, int nx, int ny) {
 
-    //extern __shared__ double sharedMemory[];
+    extern __shared__ double sharedMemory[];
 
-    __shared__ double sharedMemory[5 * TILE_SIZE_ADI * NNY];
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     // printf("BlockIdx - %d, ThreadIdx - %d, Row is %d\n", blockIdx.x, threadIdx.x, row);
 
@@ -174,9 +170,9 @@ LinearSolver::LinearSolver(nx, ny, J, T, deltaT, R) {}
 
 __host__ void ADI::solve_step() {
 
-    adi_x<<< ny, 1 >>>(deltaT, J, R, nx, ny);
+    adi_x<<< ny, 1, 5*nx*sizeof(double) >>>(deltaT, J, R, nx, ny);
     cudaDeviceSynchronize();
-    adi_y<<< nx, 1 >>>(deltaT, J, R, nx, ny);
+    adi_y<<< nx, 1, 5*ny*sizeof(double) >>>(deltaT, J, R, nx, ny);
     cudaDeviceSynchronize();
     
 }
