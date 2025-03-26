@@ -318,7 +318,7 @@ int main() {
 
     std::ofstream resid_file_jacobi("jacobi_resid.txt");
     resid_file_jacobi << "Iter, Residual" << std::endl;
-    ljacobi = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "Jacobi");
+    LaplaceHeatNS::LaplaceHeat * ljacobi = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "Jacobi");
     ljacobi->initialize_const(300.0);
     double * resid = new double[80];
     for (int i = 0; i < 80; i++) {
@@ -332,7 +332,7 @@ int main() {
 
     std::ofstream resid_file_adi("adi_resid.txt");
     resid_file_adi << "Iter, Residual" << std::endl;
-    ladi = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "ADI");
+    LaplaceHeatNS::LaplaceHeat * ladi = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "ADI");
     ladi->initialize_const(300.0);
     for (int i = 0; i < 80; i++) {
         resid[i] = ladi->compute_r_j();
