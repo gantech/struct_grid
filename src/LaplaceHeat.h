@@ -64,7 +64,7 @@ public:
     double * nlr;
     double * deltaT;
     double * J;
-    thrust::device_ptr<double> t_nlr(nlr);
+    thrust::device_ptr<double> t_nlr;
 
     LinearSolverNS::LinearSolver * solver;
 

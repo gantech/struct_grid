@@ -241,6 +241,8 @@ __global__ void compute_matvec(double * v, double * J, double * result, int nx, 
         cudaMalloc(&J, nx * ny * 5 * sizeof(double));
         cudaMalloc(&nlr, nx * ny * sizeof(double));
 
+        t_nlr = thrust::device_ptr<double>(nlr);
+
         double dx = 1.0 / double(nx);
         double dy = 3.0 / double(ny);
 
