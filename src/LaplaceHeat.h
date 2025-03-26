@@ -1,6 +1,7 @@
 #ifndef LAPLACE_HEAT
 #define LAPLACE_HEAT
 
+#include <string>
 #include "LinearSolver.h"
 #include "Jacobi.h"
 
