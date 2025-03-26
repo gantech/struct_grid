@@ -1,5 +1,4 @@
 #include "LaplaceHeat.h"
-#include <string>
 #include <iostream>
 #include <fstream>
 #include <thrust/reduce.h>
@@ -255,7 +254,7 @@ __global__ void compute_matvec(double * v, double * J, double * result, int nx, 
         } else if (solver_type == "ADI" ) {
             solver = new ADINS::ADI(nx, ny, J, T, deltaT, nlr);
         } else {
-            std::cout "Invalid solver type. Availabl solvers are Jacobi and ADI. " << std::endl;
+            std::cout << "Invalid solver type. Availabl solvers are Jacobi and ADI. " << std::endl;
             exit(1);
         }
         
@@ -319,28 +318,27 @@ int main() {
 
     std::ofstream resid_file_jacobi("jacobi_resid.txt");
     resid_file_jacobi << "Iter, Residual" << std::endl;
-    LaplaceHeatNS::LaplaceHeat ljacobi(128, 384, 0.01, "Jaobi");
-    ljacobi.initialize_const(300.0);
+    ljacobi = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "Jacobi");
+    ljacobi->initialize_const(300.0);
     double * resid = new double[80];
     for (int i = 0; i < 80; i++) {
-        resid[i] = ljacobi.compute_r_j();
+        resid[i] = ljacobi->compute_r_j();
         resid_file_jacobi << i << ", " << resid[i] << std::endl;
-        ljacobi.solve(1000); // Loops of Jacobi
-        ljacobi.update();
+        ljacobi->solve(1000); // Loops of Jacobi
+        ljacobi->update();
     }
     resid_file_jacobi.close();
     delete ljacobi;
 
-    std::ofstream resid_file_adi("adi_resid.txt")
+    std::ofstream resid_file_adi("adi_resid.txt");
     resid_file_adi << "Iter, Residual" << std::endl;
-    LaplaceHeatNS::LaplaceHeat ladi(128, 384, 0.01, "ADI");
-    ladi.initialize_const(300.0);
-    double * resid = new double[80];
+    ladi = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "ADI");
+    ladi->initialize_const(300.0);
     for (int i = 0; i < 80; i++) {
-        resid[i] = ladi.compute_r_j();
+        resid[i] = ladi->compute_r_j();
         resid_file_adi << "Iter = " << i << "resid = " << resid[i] << std::endl;
-        ladi.solve(100); // Loops of ADI
-        ladi.update();
+        ladi->solve(100); // Loops of ADI
+        ladi->update();
     }
     resid_file_adi.close();
     delete ladi;
