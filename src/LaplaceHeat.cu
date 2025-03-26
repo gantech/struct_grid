@@ -1,5 +1,7 @@
 #include "LaplaceHeat.h"
 #include <string>
+#include <iostream>
+#include <fstream>
 #include <thrust/reduce.h>
 #include <thrust/transform_reduce.h>
 #include <thrust/functional.h>
