@@ -5,7 +5,9 @@
 
 namespace ADINS {
 
-    __global__ void adi_x(double *T, double )
+    __global__ void adi_x(double *deltaT, double *J, double *R, int nx, int ny);
+    __global__ void adi_y(double *deltaT, double *J, double *R, int nx, int ny);
+
     class ADI : public LinearSolvers {
         public:
             // Constructor
