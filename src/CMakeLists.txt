@@ -17,7 +17,7 @@
 # add_subdirectory(airfoil)
 
 
-cuda_add_library(linear_solvers STATIC LinearSolver.cu Jacobi.cu)
+cuda_add_library(linear_solvers STATIC LinearSolver.cu Jacobi.cu ADI.cu)
 set_target_properties(linear_solvers PROPERTIES CUDA_ARCHITECTURES "90")
 install(TARGETS linear_solvers DESTINATION lib)
 
