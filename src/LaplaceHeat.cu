@@ -316,19 +316,19 @@ __global__ void compute_matvec(double * v, double * J, double * result, int nx, 
 
 int main() {
 
-    std::ofstream resid_file_jacobi("jacobi_resid.txt");
-    resid_file_jacobi << "Iter, Residual" << std::endl;
-    LaplaceHeatNS::LaplaceHeat * ljacobi = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "Jacobi");
-    ljacobi->initialize_const(300.0);
+    // std::ofstream resid_file_jacobi("jacobi_resid.txt");
+    // resid_file_jacobi << "Iter, Residual" << std::endl;
+    // LaplaceHeatNS::LaplaceHeat * ljacobi = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "Jacobi");
+    // ljacobi->initialize_const(300.0);
     double * resid = new double[80];
-    for (int i = 0; i < 80; i++) {
-        resid[i] = ljacobi->compute_r_j();
-        resid_file_jacobi << i << ", " << resid[i] << std::endl;
-        ljacobi->solve(1000); // Loops of Jacobi
-        ljacobi->update();
-    }
-    resid_file_jacobi.close();
-    delete ljacobi;
+    // for (int i = 0; i < 80; i++) {
+    //     resid[i] = ljacobi->compute_r_j();
+    //     resid_file_jacobi << i << ", " << resid[i] << std::endl;
+    //     ljacobi->solve(1000); // Loops of Jacobi
+    //     ljacobi->update();
+    // }
+    // resid_file_jacobi.close();
+    // delete ljacobi;
 
     std::ofstream resid_file_adi("adi_resid.txt");
     resid_file_adi << "Iter, Residual" << std::endl;

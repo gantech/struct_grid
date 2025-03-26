@@ -170,10 +170,11 @@ LinearSolver::LinearSolver(nx, ny, J, T, deltaT, R) {}
 
 __host__ void ADI::solve_step() {
 
-    adi_x<<< ny, 1, 5*nx*sizeof(double) >>>(deltaT, J, R, nx, ny);
-    cudaDeviceSynchronize();
-    adi_y<<< nx, 1, 5*ny*sizeof(double) >>>(deltaT, J, R, nx, ny);
-    cudaDeviceSynchronize();
+    std::cout << "In ADI function" << std::endl;
+    // adi_x<<< ny, 1, 5 * nx * sizeof(double) >>>(deltaT, J, R, nx, ny);
+    // cudaDeviceSynchronize();
+    // adi_y<<< nx, 1, 5 * ny * sizeof(double) >>>(deltaT, J, R, nx, ny);
+    // cudaDeviceSynchronize();
     
 }
 
