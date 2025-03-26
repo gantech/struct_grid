@@ -5,6 +5,7 @@
 #include "LinearSolver.h"
 #include "Jacobi.h"
 #include "ADI.h"
+#include <thrust/device_vector.h>
 
 namespace LaplaceHeatNS {
 
@@ -63,6 +64,7 @@ public:
     double * nlr;
     double * deltaT;
     double * J;
+    thrust::device_ptr<double> t_nlr(nlr);
 
     LinearSolverNS::LinearSolver * solver;
 

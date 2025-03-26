@@ -165,7 +165,7 @@ __global__ void adi_y(double *T, double *J, double *R, int nx, int ny) {
 }
 
 
-ADI::ADI(int nx, int ny, double * J, double *T, double *deltaT, double *R):
+ADI::ADI(int nx, int ny, double * J, double * T, double *deltaT, double *R):
 LinearSolver::LinearSolver(nx, ny, J, T, deltaT, R) {}
 
 __host__ void ADI::solve_step() {

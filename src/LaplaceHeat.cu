@@ -270,8 +270,8 @@ __global__ void compute_matvec(double * v, double * J, double * result, int nx, 
     }
 
 
-    __host__ void LaplaceHeat::initialize_const(double val) {
-        LaplaceHeatNS::initialize_const<<<grid_size_1d, block_size_1d>>>(T, val, nx, ny);
+    __host__ void LaplaceHeat::initialize_const(double * arr, double val) {
+        LaplaceHeatNS::initialize_const<<<grid_size_1d, block_size_1d>>>(arr, val, nx, ny);
         cudaDeviceSynchronize();
     }
 
@@ -289,14 +289,12 @@ __global__ void compute_matvec(double * v, double * J, double * result, int nx, 
         LaplaceHeatNS::compute_r_j<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy, kc);        
         cudaDeviceSynchronize();
         std::cout << "Entering l2 norm calculation of compute_r_j" << std::endl;
-        thrust::device_ptr<double> t_nlr(nlr);
         return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));        
     }
 
     __host__ double LaplaceHeat::compute_r() {
         LaplaceHeatNS::compute_r<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy, kc);
         cudaDeviceSynchronize();
-        thrust::device_ptr<double> t_nlr(nlr);
         return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));              
     }
 
@@ -338,7 +336,7 @@ int main() {
     ladi->initialize_const(300.0);
     for (int i = 0; i < 80; i++) {
         resid[i] = ladi->compute_r_j();
-        resid_file_adi << "Iter = " << i << "resid = " << resid[i] << std::endl;
+        resid_file_adi << "Iter = " << i << ", " << resid[i] << std::endl;
         ladi->solve(100); // Loops of ADI
         ladi->update();
     }
