@@ -32,7 +32,7 @@ class LaplaceHeat {
 public:
 
     // Constructor
-    LaplaceHeat(int nx, int ny, double kc);
+    LaplaceHeat(int nx, int ny, double kc, std::string solver_type);
 
     // Destructor
     ~LaplaceHeat();

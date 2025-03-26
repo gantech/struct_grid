@@ -1,5 +1,5 @@
 #include "LaplaceHeat.h"
-
+#include <string>
 #include <thrust/reduce.h>
 #include <thrust/transform_reduce.h>
 #include <thrust/functional.h>
@@ -230,7 +230,7 @@ __global__ void compute_matvec(double * v, double * J, double * result, int nx, 
     }
 }
 
-    LaplaceHeat::LaplaceHeat(int nx_inp, int ny_inp, double kc_inp) {
+    LaplaceHeat::LaplaceHeat(int nx_inp, int ny_inp, double kc_inp, std::string solver_type) {
 
         nx = nx_inp;
         ny = ny_inp;
@@ -248,7 +248,14 @@ __global__ void compute_matvec(double * v, double * J, double * result, int nx, 
 
         grid_size_1d = dim3( ceil (nx * ny / 1024.0) );       
 
-        solver = new JacobiNS::Jacobi(nx, ny, J, T, deltaT, nlr);
+        if (solver_type == "Jacobi") {
+            solver = new JacobiNS::Jacobi(nx, ny, J, T, deltaT, nlr);
+        } else if (solver_type == "ADI" ) {
+            solver = new ADINS::ADI(nx, ny, J, T, deltaT, nlr);
+        } else {
+            std::cout "Invalid solver type. Availabl solvers are Jacobi and ADI. " << std::endl;
+            exit(1);
+        }
         
     }
 
@@ -308,7 +315,8 @@ __global__ void compute_matvec(double * v, double * J, double * result, int nx, 
 
 int main() {
 
-    LaplaceHeatNS::LaplaceHeat l(128, 384, 0.01);
+    std::ofstream resid_file_jacobi("jacobi_resid.txt");
+    LaplaceHeatNS::LaplaceHeat l(128, 384, 0.01, "Jaobi");
     l.initialize_const(300.0);
     double * resid = new double[80];
     for (int i = 0; i < 80; i++) {
@@ -317,6 +325,21 @@ int main() {
         l.solve(1000); // Loops of Jacobi
         l.update();
     }
+    delete l;
+
+
+    std::ofstream resid_file_adi("adi_resid.txt")
+    LaplaceHeatNS::LaplaceHeat l(128, 384, 0.01, "ADI");
+    l.initialize_const(300.0);
+    double * resid = new double[80];
+    for (int i = 0; i < 80; i++) {
+        resid[i] = l.compute_r_j();
+        std::cout << "Iter = " << i << "resid = " << resid[i] << std::endl;
+        l.solve(100); // Loops of Jacobi
+        l.update();
+    }
+    delete l;
+
     return 0;
     
 }
