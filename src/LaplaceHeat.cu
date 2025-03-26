@@ -288,6 +288,7 @@ __global__ void compute_matvec(double * v, double * J, double * result, int nx, 
     __host__ double LaplaceHeat::compute_r_j() {
         LaplaceHeatNS::compute_r_j<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy, kc);        
         cudaDeviceSynchronize();
+        std::cout << "Entering l2 norm calculation of compute_r_j" << std::endl;
         thrust::device_ptr<double> t_nlr(nlr);
         return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));        
     }
@@ -306,6 +307,7 @@ __global__ void compute_matvec(double * v, double * J, double * result, int nx, 
 
     __host__ void LaplaceHeat::solve(int nsteps) {
         for (int j = 0; j < nsteps; j++) {
+            std::cout << "Solver step " << j << std::endl;
             solver->solve_step();
     }
 
