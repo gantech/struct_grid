@@ -86,7 +86,7 @@ __global__ void compute_linresid(double * deltaT, double * J, double * R, double
             deltaTijp1 = deltaT[idx_r + nx];
         }
 
-        lin_resid[idx_r] = R[idx_r] - (jim1j * vim1j + jip1j * vip1j + jijm1 * vijm1 + jijp1 * vijp1 + jij * deltaT[idx_r]);
+        lin_resid[idx_r] = R[idx_r] - (jim1j * deltaTim1j + jip1j * deltaTip1j + jijm1 * deltaTijm1 + jijp1 * deltaTijp1 + jij * deltaT[idx_r]);
     }
 }
 
