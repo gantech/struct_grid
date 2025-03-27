@@ -3,7 +3,6 @@
 
 namespace CGNS {
 
-typedef exec_matvec()
 // Functor to square the elements
 struct square {
     __device__ double operator()(double a) {
