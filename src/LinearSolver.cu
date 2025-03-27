@@ -101,12 +101,12 @@ __global__ void compute_linresid(double * deltaT, double * J, double * R, double
 
     }
 
-    LinearSolver::matvec(double * v, double * result) {
+    void LinearSolver::matvec(double * v, double * result) {
         compute_matvec<<<grid_size, block_size>>>(v, J, result, nx, ny);
         cudaDeviceSynchronize();
     }
 
-    LinearSolver::linresid(double * lin_resid) {
+    void LinearSolver::linresid(double * lin_resid) {
         compute_linresid<<<grid_size, block_size>>>(deltaT, J, R, lin_resid, nx, ny);
         cudaDeviceSynchronize();
     }
