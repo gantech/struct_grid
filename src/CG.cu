@@ -43,14 +43,15 @@ __global__ void update_searchdir(double * pvec, double * R, double beta, int nto
         cudaMalloc(&pvec, ntot * sizeof(double));
         cudaMalloc(&Jpvec, ntot * sizeof(double));
 
+        grid_size_1d = dim3( std::ceil (ntot / 1024.0) );
+
+        initialize_const<<<grid_size_1d, 1024>>>(deltaT, 0.0, ntot);
         cudaMemcpy(pvec, R, nx * ny * sizeof(double), cudaMemcpyDeviceToDevice);
-        initialize_const(deltaT, 0.0, ntot);
 
         t_pvec = thrust::device_pointer_cast(pvec);
         t_jpvec = thrust::device_pointer_cast(jpvec);
         t_resid = thrust::device_pointer_cast(R);
 
-        grid_size_1d = dim3( std::ceil (ntot / 1024.0) );
 
     }
 
