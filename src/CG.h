@@ -2,6 +2,10 @@
 #define CG_H
 #include "LinearSolver.h"
 #include <cuda_runtime.h>
+#include <thrust/reduce.h>
+#include <thrust/transform_reduce.h>
+#include <thrust/functional.h>
+#include <thrust/device_vector.h>
 
 namespace CGNS {
 

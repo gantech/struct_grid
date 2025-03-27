@@ -1,8 +1,4 @@
 #include "CG.h"
-#include <thrust/reduce.h>
-#include <thrust/transform_reduce.h>
-#include <thrust/functional.h>
-#include <thrust/device_vector.h>
 #include <cmath>
 
 namespace CGNS {
@@ -51,9 +47,9 @@ __global__ void update_searchdir(double * pvec, double * R, double beta, int nto
         cudaMemcpy(pvec, R, nx * ny * sizeof(double), cudaMemcpyDeviceToDevice);
         initialize_const(deltaT, 0.0, ntot);
 
-        t_pvec = thrust::device_ptr(pvec);
-        t_jpvec = thrust::device_ptr(jpvec);
-        t_resid = thrust::device_ptr(R);
+        t_pvec = thrust::device_pointer_cast(pvec);
+        t_jpvec = thrust::device_pointer_cast(jpvec);
+        t_resid = thrust::device_pointer_cast(R);
 
         grid_size_1d = dim3( std::ceil (ntot / 1024.0) );
 
