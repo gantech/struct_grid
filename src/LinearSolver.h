@@ -15,6 +15,13 @@ namespace LinearSolverNS {
 
             // Take 1 solver step
             __host__ virtual void solve_step() = 0;
+
+            // Compute Matrix vector product J * v and store it into result
+            __host__ matvec(double * v, double * result) final;
+
+            // Compute the residual of the linear system of equations based on latest solution R - J * deltaT and store it into lin_resid. 
+            // If lin_resid is same as R, it will be overwritten.
+            __host__ linresid(double * lin_resid) final;
         
         protected:
             int nx;

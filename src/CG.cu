@@ -82,6 +82,7 @@ __global__ void update_searchdir(double * pvec, double * R, double beta, int nto
 
         */
 
+        matvec(pvec, jpvec);
         double rsqr = thrust::transform_reduce(t_resid, t_resid + ntot, square(), 0.0, thrust::plus<double>());
         double alpha_denom = thrust::inner_product(t_pvec, t_pvec + ntot, t_jpvec, 0.0, thrust::plus<double>(), thrust::multiplies<double>());
         double alpha = rsqr / alpha_denom;
