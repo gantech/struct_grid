@@ -32,7 +32,7 @@ __global__ void update_deltat_r(double *deltaT, double * pvec, double * R, doubl
 __global__ void update_searchdir(double * pvec, double * R, double beta, int ntot) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if ( idx < ntot )
-        pvec[idx] = r[idx] + beta * pvec[idx];
+        pvec[idx] = R[idx] + beta * pvec[idx];
 }
 
 
@@ -57,7 +57,7 @@ __global__ void update_searchdir(double * pvec, double * R, double beta, int nto
     CG::~CG()
     {
         cudaFree(pvec);
-        cudaFree(Jpvec);
+        cudaFree(jpvec);
     }
 
     __host__ void CG::solve_step() {

@@ -28,7 +28,7 @@ namespace CGNS {
         private:
             int ntot;
             double * pvec; // Search direction
-            double * Jpvec; // Matvec of J with search direction pvec
+            double * jpvec; // Matvec of J with search direction pvec
 
             thrust::device_ptr<double> t_pvec;
             thrust::device_ptr<double> t_jpvec;
