@@ -1,5 +1,8 @@
 #include "CG.h"
 #include <cmath>
+#include <thrust/transform_reduce.h>
+#include <thrust/functional.h>
+#include <thrust/inner_product.h>
 
 namespace CGNS {
 
@@ -41,7 +44,7 @@ __global__ void update_searchdir(double * pvec, double * R, double beta, int nto
     ntot(nx * ny)
     {
         cudaMalloc(&pvec, ntot * sizeof(double));
-        cudaMalloc(&Jpvec, ntot * sizeof(double));
+        cudaMalloc(&jpvec, ntot * sizeof(double));
 
         grid_size_1d = dim3( std::ceil (ntot / 1024.0) );
 
