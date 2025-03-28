@@ -14,7 +14,7 @@ namespace MultiGridNS {
         public:
 
             // Constructor
-            MultiGrid(int nx, int ny, double * J, double *T, double *deltaT, double *R);
+            MultiGrid(int nx, int ny, double * J, double *T, double *deltaT, double *R, int nlevels_inp, std::string bottom_solver_inp);
 
             // Destructor
             ~MultiGrid();
@@ -35,6 +35,8 @@ namespace MultiGridNS {
             std::vector<double *> deltaTmg;
             std::vector<double *> Rmg;
             std::vector<double *> Rlinmg;
+
+            std::vector<dim3> grid_size_mg;
             
     };
 

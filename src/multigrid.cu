@@ -105,8 +105,6 @@ LinearSolver::LinearSolver(nx, ny, J, T, deltaT, R),
 nlevels(nlevels)
 {
 
-    cudaMalloc(&Rlin, nx * ny * sizeof(double));
-
     nxl.resize(nlevels);
     nyl.resize(nlevels);
     
@@ -119,7 +117,7 @@ nlevels(nlevels)
     smoothers.push_back(JacobiNS::Jacobi(nx, ny, J, T, deltaT, R));
     nxl[0] = nx;
     nyl[0] = ny;
-    grid_size.push_back(dim3(ceil(nx / (double)TILE_SIZE), ceil(ny / (double)TILE_SIZE), 1));
+    grid_size_mg.push_back(dim3(ceil(nx / (double)TILE_SIZE), ceil(ny / (double)TILE_SIZE), 1));
 
     
     Jmg[0] = J;
@@ -135,7 +133,7 @@ nlevels(nlevels)
         cudaMalloc(&deltaTmg[ilevel], nxl[ilevel] * nyl[ilevel] * sizeof(double));
         cudaMalloc(&Rlinmg[ilevel], nxl[ilevel] * nyl[ilevel] * sizeof(double));
 
-        grid_size.push_back(dim3(ceil(nxl[ilevel] / (double)TILE_SIZE), ceil(nyl[ilevel] / (double)TILE_SIZE), 1));
+        grid_size_mg.push_back(dim3(ceil(nxl[ilevel] / (double)TILE_SIZE), ceil(nyl[ilevel] / (double)TILE_SIZE), 1));
     }
 
     for (int ilevel = 0; ilevel < (nlevels-1); ilevel++)
@@ -148,7 +146,7 @@ nlevels(nlevels)
     
     // Create restricted Jacobian matrices at each coarse level
     for (int ilevel = 1; ilevel < nlevels; ilevel++) {
-        restrict_j<<<grid_size[ilevel], block_size>>>(Jmg[ilevel-1], Jmg[ilevel], nxl[ilevel], nyl[ilevel], nxl[ilevel-1], nyl[ilevel-1]);
+        restrict_j<<<grid_size_mg[ilevel], block_size>>>(Jmg[ilevel-1], Jmg[ilevel], nxl[ilevel], nyl[ilevel], nxl[ilevel-1], nyl[ilevel-1]);
         cudaDeviceSynchronize();
     }
 
@@ -194,10 +192,10 @@ MultiGrid::~MultiGrid()
 
 void MultiGrid::solve_step() {
 
-    initialize_const<<<grid_size_1d[0], block_size_1d>>>(deltaT, 0.0, nxl[0] * nyl[0]);
+    initialize_const<<<grid_size_mg_1d[0], block_size_1d>>>(deltaT, 0.0, nxl[0] * nyl[0]);
     cudaDeviceSynchronize();
     for (int ilevel=1; ilevel < nlevels; ilevel++) {
-        initialize_const<<<grid_size_1d[ilevel], block_size_1d>>>(deltaTmg[ilevel-1], 0.0, nxl[ilevel] * nyl[ilevel]);
+        initialize_const<<<grid_size_mg_1d[ilevel], block_size_1d>>>(deltaTmg[ilevel-1], 0.0, nxl[ilevel] * nyl[ilevel]);
         cudaDeviceSynchronize();
     }
 
@@ -205,18 +203,18 @@ void MultiGrid::solve_step() {
     linresid(Rlin);
 
     for (int ilevel = 1; ilevel < nlevels-1; ilevel++) {
-        restrict_resid<<<grid_size[ilevel], block_size>>>(Rmg[ilevel], Rlin[ilevel-1], nxl[ilevel], nyl[ilevel], nxl[ilevel-1], nyl[ilevel-1]);
+        restrict_resid<<<grid_size_mg[ilevel], block_size>>>(Rmg[ilevel], Rlin[ilevel-1], nxl[ilevel], nyl[ilevel], nxl[ilevel-1], nyl[ilevel-1]);
         cudaDeviceSynchronize();
         smoothers[ilevel].solve(10);
         smoothers[ilevel].linresid(Rlinmg[ilevel]);
     }
 
-    restrict_resid<<<grid_size[nlevels-1], block_size>>>(Rmg[nlevels-1], Rlin[nlevels-2], nxl[nlevels-1], nyl[nlevels-1], nxl[nlevels-2], nyl[nlevels-2]);
+    restrict_resid<<<grid_size_mg[nlevels-1], block_size>>>(Rmg[nlevels-1], Rlin[nlevels-2], nxl[nlevels-1], nyl[nlevels-1], nxl[nlevels-2], nyl[nlevels-2]);
     cudaDeviceSynchronize();
     smoothers[nlevels-1].solve(10); // This might need to be a special call for the bottom solve
 
     for (int ilevel = nlevels-2; ilevel > -1; ilevel--) {
-        prolongate_error<<<grid_size[ilevel+1], block_size>>>(deltaTmg[ilevel+1] , deltaTmg[ilevel], nxl[ilevel+1], nyl[ilevel+1], nxl[ilevel], nyl[ilevel]);
+        prolongate_error<<<grid_size_mg[ilevel+1], block_size>>>(deltaTmg[ilevel+1] , deltaTmg[ilevel], nxl[ilevel+1], nyl[ilevel+1], nxl[ilevel], nyl[ilevel]);
         cudaDeviceSynchronize();
         smoothers[ilevel].solve(10);
     }
