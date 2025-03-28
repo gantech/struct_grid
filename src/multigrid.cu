@@ -117,7 +117,7 @@ nlevels(nlevels)
     deltaTmg.resize(nlevels);
     Rlinmg.resize(nlevels);
     
-    smoothers.push_back(JacobiNS::Jacobi(nx, ny, J, T, deltaT, R));
+    smoothers.push_back(new JacobiNS::Jacobi(nx, ny, J, T, deltaT, R));
     nxl[0] = nx;
     nyl[0] = ny;
     grid_size_mg.push_back(dim3(ceil(nx / (double)TILE_SIZE), ceil(ny / (double)TILE_SIZE), 1));
@@ -140,12 +140,12 @@ nlevels(nlevels)
     }
 
     for (int ilevel = 0; ilevel < (nlevels-1); ilevel++)
-        smoothers.push_back(JacobiNS::Jacobi(nxl[ilevel], nyl[ilevel], Jmg[ilevel], Rmg[ilevel], deltaTmg[ilevel], Rlin[ilevel]));        
+        smoothers.push_back(new JacobiNS::Jacobi(nxl[ilevel], nyl[ilevel], Jmg[ilevel], Rmg[ilevel], deltaTmg[ilevel], Rlin[ilevel]));        
     
     if (bottom_solver == "Conjugate Gradient")
-        smoothers.push_back(ConjugateGradientNS::ConjugateGradient(nxl[nlevels-1], nyl[nlevels-1], Jmg[nlevels-1], Rmg[nlevels-1], deltaTmg[nlevels-1], Rlin[nlevels-1]));
+        smoothers.push_back(new ConjugateGradientNS::ConjugateGradient(nxl[nlevels-1], nyl[nlevels-1], Jmg[nlevels-1], Rmg[nlevels-1], deltaTmg[nlevels-1], Rlin[nlevels-1]));
     else
-        smoothers.push_back(JacobiNS::Jacobi(nxl[nlevels-1], nyl[nlevels-1], Jmg[nlevels-1], Rmg[nlevels-1], deltaTmg[nlevels-1], Rlin[nlevels-1]));
+        smoothers.push_back(new JacobiNS::Jacobi(nxl[nlevels-1], nyl[nlevels-1], Jmg[nlevels-1], Rmg[nlevels-1], deltaTmg[nlevels-1], Rlin[nlevels-1]));
     
     // Create restricted Jacobian matrices at each coarse level
     for (int ilevel = 1; ilevel < nlevels; ilevel++) {
@@ -208,18 +208,18 @@ void MultiGrid::solve_step() {
     for (int ilevel = 1; ilevel < nlevels-1; ilevel++) {
         restrict_resid<<<grid_size_mg[ilevel], block_size>>>(Rmg[ilevel], Rlin[ilevel-1], nxl[ilevel], nyl[ilevel], nxl[ilevel-1], nyl[ilevel-1]);
         cudaDeviceSynchronize();
-        smoothers[ilevel].solve(10);
-        smoothers[ilevel].linresid(Rlinmg[ilevel]);
+        smoothers[ilevel]->solve(10);
+        smoothers[ilevel]->linresid(Rlinmg[ilevel]);
     }
 
     restrict_resid<<<grid_size_mg[nlevels-1], block_size>>>(Rmg[nlevels-1], Rlin[nlevels-2], nxl[nlevels-1], nyl[nlevels-1], nxl[nlevels-2], nyl[nlevels-2]);
     cudaDeviceSynchronize();
-    smoothers[nlevels-1].solve(10); // This might need to be a special call for the bottom solve
+    smoothers[nlevels-1]->solve(10); // This might need to be a special call for the bottom solve
 
     for (int ilevel = nlevels-2; ilevel > -1; ilevel--) {
         prolongate_error<<<grid_size_mg[ilevel+1], block_size>>>(deltaTmg[ilevel+1] , deltaTmg[ilevel], nxl[ilevel+1], nyl[ilevel+1], nxl[ilevel], nyl[ilevel]);
         cudaDeviceSynchronize();
-        smoothers[ilevel].solve(10);
+        smoothers[ilevel]->solve(10);
     }
     
 
