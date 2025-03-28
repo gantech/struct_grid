@@ -208,14 +208,14 @@ void MultiGrid::solve_step() {
     linresid(Rlinmg[0]);
 
     for (int ilevel = 1; ilevel < nlevels-1; ilevel++) {
-        restrict_resid<<<grid_size_mg[ilevel], block_size>>>(Rmg[ilevel], Rlin[ilevel-1], nxl[ilevel], nyl[ilevel], nxl[ilevel-1], nyl[ilevel-1]);
+        restrict_resid<<<grid_size_mg[ilevel], block_size>>>(Rmg[ilevel], Rlinmg[ilevel-1], nxl[ilevel], nyl[ilevel], nxl[ilevel-1], nyl[ilevel-1]);
         cudaDeviceSynchronize();
         for (int i=0; i < 10; i++)        
             smoothers[ilevel]->solve_step();
         smoothers[ilevel]->linresid(Rlinmg[ilevel]);
     }
 
-    restrict_resid<<<grid_size_mg[nlevels-1], block_size>>>(Rmg[nlevels-1], Rlin[nlevels-2], nxl[nlevels-1], nyl[nlevels-1], nxl[nlevels-2], nyl[nlevels-2]);
+    restrict_resid<<<grid_size_mg[nlevels-1], block_size>>>(Rmg[nlevels-1], Rlinmg[nlevels-2], nxl[nlevels-1], nyl[nlevels-1], nxl[nlevels-2], nyl[nlevels-2]);
     cudaDeviceSynchronize();
     for (int i=0; i < 10; i++)    
         smoothers[nlevels-1]->solve_step(); // This might need to be a special call for the bottom solve
