@@ -33,7 +33,7 @@ namespace LinearSolverNS {
             double * R;
 
             dim3 grid_size;
-            dim3 block_size(TILE_SIZE, TILE_SIZE);
+            dim3 block_size(TILE_SIZE, TILE_SIZE, 1);
         
             dim3 grid_size_1d;
             dim3 block_size_1d = 1024;
