@@ -1,6 +1,7 @@
 #ifndef LINEAR_SOLVER
 #define LINEAR_SOLVER
 #include <cuda_runtime.h>
+#define TILE_SIZE 32
 
 namespace LinearSolverNS {
 
@@ -32,7 +33,7 @@ namespace LinearSolverNS {
             double * R;
 
             dim3 grid_size;
-            dim3 block_size;
+            dim3 block_size(TILE_SIZE, TILE_SIZE);
         
             dim3 grid_size_1d;
             dim3 block_size_1d = 1024;

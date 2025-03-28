@@ -94,9 +94,7 @@ __global__ void compute_linresid(double * deltaT, double * J, double * R, double
         double * Jinp, double *Tinp, double *deltaTinp, double *Rinp):
     nx(nxinp), ny(nyinp), J(Jinp), T(Tinp), deltaT(deltaTinp), R(Rinp) {
 
-        grid_size = dim3(nx, ny);
-        block_size = dim3(32, 32);
-
+        grid_size = dim3(std::ceil(nx/blockSize.x), std::ceil(ny/blockSize.y));
         grid_size_1d = dim3( std::ceil (nx * ny / 1024.0) );
 
     }
@@ -106,7 +104,8 @@ __global__ void compute_linresid(double * deltaT, double * J, double * R, double
         cudaDeviceSynchronize();
     }
 
-    void LinearSolver::linresid(double * lin_resid) {
+    void 
+    LinearSolver::linresid(double * lin_resid) {
         compute_linresid<<<grid_size, block_size>>>(deltaT, J, R, lin_resid, nx, ny);
         cudaDeviceSynchronize();
     }

@@ -36,11 +36,6 @@ namespace MultiGridNS {
             std::vector<double *> Rmg;
             std::vector<double *> Rlinmg;
             
-            std::vector<dim3> grid_size;
-            std::vector<dim3> grid_size_1d;
-            dim3 block_size(TILE_SIZE, TILE_SIZE);
-            dim3 block_size_1d(1024);
-
     };
 
 
