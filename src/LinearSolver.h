@@ -1,6 +1,7 @@
 #ifndef LINEAR_SOLVER
 #define LINEAR_SOLVER
 #include <cuda_runtime.h>
+
 #define TILE_SIZE 32
 
 namespace LinearSolverNS {
