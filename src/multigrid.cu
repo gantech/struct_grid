@@ -1,6 +1,6 @@
 #include "Multigrid.h"
 #include "Jacobi.h"
-#include "ConjugateGradient.h"
+#include "CG.h"
 
 #include <iostream>
 #include <fstream>
