@@ -96,6 +96,7 @@ __global__ void compute_linresid(double * deltaT, double * J, double * R, double
 
         grid_size = dim3(std::ceil(nx/blockSize.x), std::ceil(ny/blockSize.y));
         grid_size_1d = dim3( std::ceil (nx * ny / 1024.0) );
+        block_size = dim3(TILE_SIZE, TILE_SIZE, 1);
 
     }
 
