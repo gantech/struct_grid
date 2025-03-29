@@ -7,6 +7,8 @@ namespace LidDridenCavityNS {
 
         nx = nx_inp;
         ny = ny_inp;
+        dx = 1.0 / nx;
+        dy = 3.0 / ny;
         nu = nu_inp;
         
         grid_size = dim3(nx, ny);
@@ -24,7 +26,7 @@ namespace LidDridenCavityNS {
         cudaMalloc(&Jcont, nx * ny * 5 * sizeof(double));
         cudaMalloc(&u_nlr, nx * ny * sizeof(double));
         cudaMalloc(&v_nlr, nx * ny * sizeof(double));
-        cudaMalloc(&p_nlr, nx * ny * sizeof(double));
+        cudaMalloc(&cont_nlr, nx * ny * sizeof(double));
 
         std::cout << "Allocated " <<  19 * nx * ny * sizeof(double) / std::double(1 << 30) << " GB of memory" << std::endl;
         t_unlr = thrust::device_ptr<double>(u_nlr);
