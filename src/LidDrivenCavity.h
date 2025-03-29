@@ -13,7 +13,7 @@ namespace LidDrivenCavityNS {
 __global__ void initialize_const(double *T, double val, int nx, int ny);
 
 // Kernel function for update - No tiling or shared memory
-__global__ void update(double *T, double *deltaT, double alpha = 1.0; int nx, int ny);
+__global__ void update(double *T, double *deltaT, double alpha = 1.0, int nx, int ny);
 
 // Kernel function for calculation of Jacobian and Residual - No tiling or shared memory
 __global__ void compute_mom_r_j(double *T, double *J, double *R, int nx, int ny, double dx, double dy, double kc);
@@ -60,7 +60,7 @@ public:
     double * cont_nlr;
     double * deltaU;
     double * deltaV;
-    double * deltaP
+    double * deltaP;
     double * Jmom;
     double * Jcont;
 
