@@ -28,7 +28,7 @@ namespace LidDrivenCavityNS {
         cudaMalloc(&v_nlr, nx * ny * sizeof(double));
         cudaMalloc(&cont_nlr, nx * ny * sizeof(double));
 
-        std::cout << "Allocated " <<  19 * nx * ny * sizeof(double) / std::double(1 << 30) << " GB of memory" << std::endl;
+        std::cout << "Allocated " <<  19 * nx * ny * sizeof(double) / double(1 << 30) << " GB of memory" << std::endl;
         t_unlr = thrust::device_ptr<double>(u_nlr);
         t_vnlr = thrust::device_ptr<double>(v_nlr);
         t_cont_nlr = thrust::device_ptr<double>(cont_nlr);
@@ -47,7 +47,7 @@ namespace LidDrivenCavityNS {
         cudaFree(Jcont);
         cudaFree(u_nlr);
         cudaFree(v_nlr);
-        cudaFree(p_nlr);
+        cudaFree(cont_nlr);
 
     }
     
