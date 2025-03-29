@@ -1,3 +1,7 @@
+#include "Multigrid.h"
+#include "Jacobi.h"
+#include "CG.h"
+
 #include <iostream>
 #include <fstream>
 #include <cmath>
@@ -6,31 +10,9 @@
 #include <thrust/reduce.h>
 #include <thrust/transform_reduce.h>
 #include <thrust/functional.h>
-#include <thrust/device_vector.h>
 
-#define TILE_SIZE 32
-#define TILE_SIZE_ADI 1
 
-// Kernel function for initialization - No tiling or shared memory
-__global__ void initialize(double *T, int nx, int ny, double dx, double dy);
-
-// Kernel function for initialization - No tiling or shared memory
-__global__ void initialize_ref(double *T, int nx, int ny, double dx, double dy);
-
-// Kernel function for update - No tiling or shared memory
-__global__ void update(double *T, double *deltaT, int nx, int ny, double dx, double dy);
-
-// Kernel function for calculation of Jacobian and Residual - No tiling or shared memory
-__global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, double dx, double dy, double kc);
-
-// Kernel function for calculation of Residual - No tiling or shared memory
-__global__ void compute_r(double *T, double * J, double *R, int nx, int ny, double dx, double dy, double kc) ;
-
-// Kernel function for Thomas solves in the X direction - part of ADI 
-__global__ void adi_x(double *T, double *J, double *R, int nx, int ny);
-
-// Kernel function for Thomas solves in the Y direction - part of ADI 
-__global__ void adi_y(double *T, double *J, double *R, int nx, int ny);
+namespace MultiGridNS {
 
 // Functor to square the elements
 struct square {
@@ -39,66 +21,13 @@ struct square {
     }
 };
 
-// Kernel function to initialize a given field to zero
-__global__ void initialize_zero(double * T, int nx, int ny) {
-
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
-
-    int idx = (j * nx) + i;
-
-    if ( (i < nx) && (j < ny))
-        T[idx] = 0.0;
-}
-
-// Kernel to compute linear residual of the linear system of equations J * deltaT = rhs. 
-// Write linear residual to new array R. If you want the rhs overwritten, pass the same pointers for rhs and R
-__global__ void compute_lin_resid(double * deltaT, double * J, double * rhs, double * R, int nx, int ny) {
-
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
-
-    int idx_r = (j * nx) + i;
-    int idx_j = idx_r * 5;
-
-    if ( (i < nx) && (j < ny)) {
-
-        double jij = J[idx_j];
-        double jim1j = J[idx_j + 1];
-        double jip1j = J[idx_j + 2];
-        double jijm1 = J[idx_j + 3];
-        double jijp1 = J[idx_j + 4];
-
-        double tip1j = 0.0;
-        double tim1j = 0.0;
-        double tijp1 = 0.0;
-        double tijm1 = 0.0;
-
-        if ( i == 0) {
-            tip1j = deltaT[idx_r + 1];
-        } else if ( i == (nx - 1)) {
-            tim1j = deltaT[idx_r - 1];
-        } else {
-            tip1j = deltaT[idx_r + 1];
-            tim1j = deltaT[idx_r - 1];
-        }
-
-        if ( j == 0) {
-            tijp1 = deltaT[idx_r + nx];
-        } else if ( j == (ny - 1)) {
-            tijm1 = deltaT[idx_r - nx];
-        } else {
-            tijm1 = deltaT[idx_r - nx];
-            tijp1 = deltaT[idx_r + nx];
-        }
-
-        // Write to residual
-
-        if (std::abs(jij) < 1e-5) {
-            printf("nx = %d, ny = %d, i = %d, j = %d, R = %e, jim1j = %e, jip1j = %e, jijm1 = %e, jijp1 = %e, jij = %e \n", nx, ny, i, j, R[idx_r], jim1j, jip1j, jijm1, jijp1, jij);
-        }
-        R[idx_r] = rhs[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1 - jij * deltaT[idx_r];
-    }
+// Kernel function for initialization - No tiling or shared memory
+// This is copied from LaplaceHeat - TODO: Put this into a utils library.
+// Unfortunately cudaMemset only works on bytes 
+__global__ void initialize_const(double *T, double val, int ntot) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( idx < ntot ) 
+        T[idx] = val;
 }
 
 // Restrict residual by one level. Expected that nxc = nxf/2 and nyc = nyf/2
@@ -174,249 +103,132 @@ __global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, 
 
 }
 
-// Kernel function for Gauss-Seidel smoother - No tiling or shared memory
-__global__ void jacobi(double *deltaT, double * deltaT1, double *J, double *R, int nx, int ny) {
+MultiGrid::MultiGrid(int nx, int ny, double * J, double *T, double *deltaT, double *R, int nlevels_inp, std::string bottom_solver):
+LinearSolver::LinearSolver(nx, ny, J, T, deltaT, R),
+nlevels(nlevels)
+{
 
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    nxl.resize(nlevels);
+    nyl.resize(nlevels);
+    
+    smoothers.resize(nlevels);
+    Jmg.resize(nlevels);
+    Rmg.resize(nlevels);
+    deltaTmg.resize(nlevels);
+    Rlinmg.resize(nlevels);
+    
+    smoothers.push_back(new JacobiNS::Jacobi(nx, ny, J, T, deltaT, R));
+    nxl[0] = nx;
+    nyl[0] = ny;
+    grid_size_mg.push_back(dim3(ceil(nx / (double)TILE_SIZE), ceil(ny / (double)TILE_SIZE), 1));
 
-    if (( i < nx) && (j < ny)) {
-        
-        int idx_r = (j * nx) + i;
-        int idx_j = idx_r * 5;
+    
+    Jmg[0] = J;
+    Rmg[0] = R;
+    deltaTmg[0] = deltaT;
+    cudaMalloc(&Rlinmg[0], nx * ny * sizeof(double));
+    
+    for(int ilevel = 1; ilevel < nlevels; ilevel++) {
+        nxl[ilevel] = nx / (1 << ilevel);
+        nyl[ilevel] = ny / (1 << ilevel);
+        cudaMalloc(&Jmg[ilevel], nxl[ilevel] * nyl[ilevel] * 5 * sizeof(double));
+        cudaMalloc(&Rmg[ilevel], nxl[ilevel] * nyl[ilevel] * sizeof(double));
+        cudaMalloc(&deltaTmg[ilevel], nxl[ilevel] * nyl[ilevel] * sizeof(double));
+        cudaMalloc(&Rlinmg[ilevel], nxl[ilevel] * nyl[ilevel] * sizeof(double));
 
-        double jij = J[idx_j];
-        double jim1j = J[idx_j + 1];
-        double jip1j = J[idx_j + 2];
-        double jijm1 = J[idx_j + 3];
-        double jijp1 = J[idx_j + 4];
-
-        double tip1j = 0.0;
-        double tim1j = 0.0;
-        double tijp1 = 0.0;
-        double tijm1 = 0.0;
-
-        if (i == 0) {
-            tip1j = deltaT[idx_r + 1];
-        } else if (i == (nx - 1)) {
-            tim1j = deltaT[idx_r - 1];
-        } else {
-            tip1j = deltaT[idx_r + 1];
-            tim1j = deltaT[idx_r - 1];
-        }
-
-        if (j == 0) {
-            tijp1 = deltaT[idx_r + nx];
-        } else if (j == (ny - 1)) {
-            tijm1 = deltaT[idx_r - nx];
-        } else {
-            tijm1 = deltaT[idx_r - nx];
-            tijp1 = deltaT[idx_r + nx];
-        }
-
-        deltaT1[idx_r] = (R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
-
-        if (std::abs(jij) < 1e-8)
-            printf("nx = %d, ny = %d, i = %d, j = %d, deltaT = %e, R = %e, jim1j = %e, jip1j = %e, jijm1 = %e, jijp1 = %e, jij = %e \n", nx, ny, i, j, deltaT[idx_r], R[idx_r], jim1j, jip1j, jijm1, jijp1, jij);
-
-
-        // if (std::isinf(deltaT[idx_r]) || std::isnan(deltaT[idx_r]))
+        grid_size_mg.push_back(dim3(ceil(nxl[ilevel] / (double)TILE_SIZE), ceil(nyl[ilevel] / (double)TILE_SIZE), 1));
+        grid_size_1d_mg.push_back(dim3(ceil(nxl[ilevel] * nyl[ilevel] / 1024.0)));
     }
+
+    for (int ilevel = 0; ilevel < (nlevels-1); ilevel++)
+        smoothers.push_back(new JacobiNS::Jacobi(nxl[ilevel], nyl[ilevel], Jmg[ilevel], Rmg[ilevel], deltaTmg[ilevel], Rlinmg[ilevel]));
+    
+    if (bottom_solver == "Conjugate Gradient")
+        smoothers.push_back(new CGNS::CG(nxl[nlevels-1], nyl[nlevels-1], Jmg[nlevels-1], Rmg[nlevels-1], deltaTmg[nlevels-1], Rlinmg[nlevels-1]));
+    else
+        smoothers.push_back(new JacobiNS::Jacobi(nxl[nlevels-1], nyl[nlevels-1], Jmg[nlevels-1], Rmg[nlevels-1], deltaTmg[nlevels-1], Rlinmg[nlevels-1]));
+    
+    // Create restricted Jacobian matrices at each coarse level
+    for (int ilevel = 1; ilevel < nlevels; ilevel++) {
+        restrict_j<<<grid_size_mg[ilevel], block_size>>>(Jmg[ilevel-1], Jmg[ilevel], nxl[ilevel], nyl[ilevel], nxl[ilevel-1], nyl[ilevel-1]);
+        cudaDeviceSynchronize();
+    }
+
+}
+
+MultiGrid::~MultiGrid()
+{
+
+    delete smoothers[0];
+    cudaFree(Rlinmg[0]);
+    for(int ilevel = 1; ilevel < nlevels-1; ilevel++) {
+        delete smoothers[ilevel];
+        cudaFree(Jmg[ilevel]);
+        cudaFree(Rmg[ilevel]);
+        cudaFree(deltaTmg[ilevel]);
+        cudaFree(Rlinmg[ilevel]);
+    }
+
 }
 
 
-int main() {
+/*
 
-    // Finest level problem size
-    int nx_f = 128*32;
-    int ny_f = 384*32;
+    Sub-steps for 1 step of multigrid
 
-    // Need resolution only on the finest grid to assemble the equations
-    double dx = 1.0 / double(nx_f);
-    double dy = 3.0 / double(ny_f);
+    1. Initialize deltaT to zero at all levels
+    2. Do some smoothing on the finest level first
+    3. Compute Rlin at finest level
+    4. For (ilevel = 1; ilevel < nlevels-1; ilevel++)
+        Restrict residual to coarser level
+        Do some smoothing at this level to get the error
+        Compute linear residual
+    5. Restrict residual to the coarsest level
+    6. Do bottom level solve with user-specified choice of solver
+    7. For (ilevel = nlevels-2; ilevel > 0; ilevel--)
+        Prolongate error from ilevel+1 to ilevel
+        Do some more smoothing at ilevel
+    8. Prolongate error to finest level
+    9. Do more smoothing at the finest level
 
-    double kc = 0.01;
-
-    // Number of levels in multigrid - each refined in all directions by a factor of 2
-    int nlevels = 10; 
-    std::vector<int> nx(nlevels);
-    std::vector<int> ny(nlevels);
-    for (int i = 0; i < nlevels; i++) {
-        nx[i] = nx_f / (1 << i);
-        ny[i] = ny_f / (1 << i);
-        std::cout << "ilevel = " << i << ", nx = " << nx[i] << ", ny = " << ny[i] << std::endl;
-    }
-
-    // Fields for temperature and non-linear residual are required only at the finest level
-    double * T;
-    cudaMalloc(&T, nx_f * ny_f * sizeof(double));
-    double * nlr;
-    cudaMalloc(&nlr, nx_f * ny_f * sizeof(double));
-
-    std::vector<double*> deltaT(nlevels), deltaT1(nlevels), J(nlevels), R(nlevels), Rlin(nlevels);
-    for (int i = 0; i < nlevels; i++) {
-        cudaMalloc(&deltaT[i], nx[i] * ny[i] * sizeof(double));
-        cudaMalloc(&deltaT1[i], nx[i] * ny[i] * sizeof(double));
-        cudaMalloc(&J[i], nx[i] * ny[i] * 5 * sizeof(double));
-        cudaMalloc(&R[i], nx[i] * ny[i] * sizeof(double));
-        cudaMalloc(&Rlin[i], nx[i] * ny[i] * sizeof(double));
-    }
-
-    // Grid and block size
-    std::vector<dim3> grid_size;
-    for (int ilevel = 0; ilevel < nlevels; ilevel++) 
-        grid_size.push_back(dim3(ceil(nx[ilevel] / (double)TILE_SIZE), ceil(ny[ilevel] / (double)TILE_SIZE), 1));
-    // Keep block size same for all grids for now
-    dim3 block_size(TILE_SIZE, TILE_SIZE, 1);
-
-    initialize<<<grid_size[0], block_size>>>(T, nx[0], ny[0], dx, dy);
-    cudaDeviceSynchronize();
-
-    compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
-    cudaDeviceSynchronize();
-    double glob_resid = 0.0;
-    thrust::device_ptr<double> t_nlr(nlr);
-    glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
-    std::cout << "Starting residual with const 300.0 field = " << glob_resid << std::endl;
     
-    // Compute the Jacobian matrix at the coarser levels 
-    for (int ilevel = 1; ilevel < nlevels; ilevel++) {
-        restrict_j<<<grid_size[ilevel], block_size>>>(J[ilevel], J[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
-        cudaDeviceSynchronize();
-    }
+*/    
 
-    // Write 1 V-cycle of multigrid
+void MultiGrid::solve_step() {
 
-    for (int iloop = 0; iloop < 100; iloop++) {    
-    // Downstroke of V-cycle
-
-    // Initialize deltaT at all levels to zero
-    for (int ilevel = 0; ilevel < nlevels; ilevel++) {
-        initialize_zero<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], nx[ilevel], ny[ilevel]);
-        cudaDeviceSynchronize();
-        initialize_zero<<<grid_size[ilevel], block_size>>>(deltaT1[ilevel], nx[ilevel], ny[ilevel]);
-        cudaDeviceSynchronize();
-    }
-
-    // Do some smoothing on the finest level first
-    for (int ismooth = 0; ismooth < 10; ismooth++) {
-        jacobi<<<grid_size[0], block_size>>>(deltaT[0], deltaT1[0], J[0], nlr, nx[0], ny[0]);
-        cudaDeviceSynchronize();
-        jacobi<<<grid_size[0], block_size>>>(deltaT1[0], deltaT[0], J[0], nlr, nx[0], ny[0]);
-        cudaDeviceSynchronize();
-    }
-
-    // // Compute the residual of the linear system of equations at this level
-    compute_lin_resid<<<grid_size[0], block_size>>>(deltaT[0], J[0], nlr, Rlin[0], nx[0], ny[0]);
+    initialize_const<<<grid_size_1d_mg[0], block_size_1d>>>(deltaT, 0.0, nxl[0] * nyl[0]);
     cudaDeviceSynchronize();
+    for (int ilevel=1; ilevel < nlevels; ilevel++) {
+        initialize_const<<<grid_size_1d_mg[ilevel], block_size_1d>>>(deltaTmg[ilevel-1], 0.0, nxl[ilevel] * nyl[ilevel]);
+        cudaDeviceSynchronize();
+    }
+
+    for (int i=0; i < 10; i++)
+        smoothers[0]->solve_step();
+    linresid(Rlinmg[0]);
 
     for (int ilevel = 1; ilevel < nlevels-1; ilevel++) {
-        // Restrict the residual of the linear system
-        restrict_resid<<<grid_size[ilevel], block_size>>>(R[ilevel], Rlin[ilevel-1], nx[ilevel], ny[ilevel], nx[ilevel-1], ny[ilevel-1]);
+        restrict_resid<<<grid_size_mg[ilevel], block_size>>>(Rmg[ilevel], Rlinmg[ilevel-1], nxl[ilevel], nyl[ilevel], nxl[ilevel-1], nyl[ilevel-1]);
         cudaDeviceSynchronize();
-        
-        // Perform some smoothing at this level to get the error
-        for (int ismooth = 0; ismooth < 10; ismooth++) {
-            jacobi<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], deltaT1[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
-            cudaDeviceSynchronize();
-            jacobi<<<grid_size[ilevel], block_size>>>(deltaT1[ilevel], deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
-            cudaDeviceSynchronize();            
-        }
-
-        // Compute the residual of the linear system of equations at this level.
-        compute_lin_resid<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], J[ilevel], R[ilevel], Rlin[ilevel], nx[ilevel], ny[ilevel]);
-        cudaDeviceSynchronize();
-
+        for (int i=0; i < 10; i++)        
+            smoothers[ilevel]->solve_step();
+        smoothers[ilevel]->linresid(Rlinmg[ilevel]);
     }
 
-    // Restrict the residual of the linear system to coarsest level
-    restrict_resid<<<grid_size[nlevels-1], block_size>>>(R[nlevels-1], Rlin[nlevels-2], nx[nlevels-1], ny[nlevels-1], nx[nlevels-2], ny[nlevels-2]);
+    restrict_resid<<<grid_size_mg[nlevels-1], block_size>>>(Rmg[nlevels-1], Rlinmg[nlevels-2], nxl[nlevels-1], nyl[nlevels-1], nxl[nlevels-2], nyl[nlevels-2]);
     cudaDeviceSynchronize();
+    for (int i=0; i < 10; i++)    
+        smoothers[nlevels-1]->solve_step(); // This might need to be a special call for the bottom solve
 
-    // Do bottom level solve with ADI 
-    dim3 grid_size_adix(ceil(ny[nlevels-1] / (double)TILE_SIZE_ADI), 1, 1);
-    dim3 block_size_adi(TILE_SIZE_ADI, 1,1);
-    dim3 grid_size_adiy(ceil(nx[nlevels-1] / (double)TILE_SIZE_ADI), 1, 1);
-
-    for (int ismooth = 0; ismooth < 10; ismooth++) {
-
-        compute_lin_resid<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], Rlin[nlevels-1], nx[nlevels-1], ny[nlevels-1]);        
+    for (int ilevel = nlevels-2; ilevel > -1; ilevel--) {
+        prolongate_error<<<grid_size_mg[ilevel+1], block_size>>>(deltaTmg[ilevel+1] , deltaTmg[ilevel], nxl[ilevel+1], nyl[ilevel+1], nxl[ilevel], nyl[ilevel]);
         cudaDeviceSynchronize();
-
-        jacobi<<<grid_size[nlevels-1], block_size>>>(deltaT[nlevels-1], deltaT1[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-        cudaDeviceSynchronize();  
-        jacobi<<<grid_size[nlevels-1], block_size>>>(deltaT1[nlevels-1], deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-        cudaDeviceSynchronize();
-        // adi_x<<<grid_size_adix, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-        // cudaDeviceSynchronize();
-        // adi_y<<<grid_size_adiy, block_size_adi>>>(deltaT[nlevels-1], J[nlevels-1], R[nlevels-1], nx[nlevels-1], ny[nlevels-1]);
-        // cudaDeviceSynchronize();
+        for (int i=0; i < 10; i++)
+            smoothers[ilevel]->solve_step();
     }
+    
+
+}
 
 
-    // Upstroke of V-cycle - This should end on the finest level (ilevel = 0)
-    for (int ilevel = nlevels - 2; ilevel > 0; ilevel--) {
-        // Prolongate the error
-        prolongate_error<<<grid_size[ilevel+1], block_size>>>(deltaT[ilevel+1], deltaT[ilevel], nx[ilevel+1], ny[ilevel+1], nx[ilevel], ny[ilevel]);
-        cudaDeviceSynchronize();
-
-        // Do some more smoothing at this level to reduce the error
-        for (int ismooth = 0; ismooth < 10; ismooth++) {     
-            jacobi<<<grid_size[ilevel], block_size>>>(deltaT[ilevel], deltaT1[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
-            cudaDeviceSynchronize();
-            jacobi<<<grid_size[ilevel], block_size>>>(deltaT1[ilevel], deltaT[ilevel], J[ilevel], R[ilevel], nx[ilevel], ny[ilevel]);
-            cudaDeviceSynchronize();
-        }
-    }
-
-    prolongate_error<<<grid_size[1], block_size>>>(deltaT[1], deltaT[0], nx[1], ny[1], nx[0], ny[0]);
-    cudaDeviceSynchronize();
-
-    for (int ismooth=0; ismooth < 10; ismooth++) {
-        jacobi<<<grid_size[0], block_size>>>(deltaT[0], deltaT1[0], J[0], nlr, nx[0], ny[0]);
-        cudaDeviceSynchronize();
-        jacobi<<<grid_size[0], block_size>>>(deltaT1[0], deltaT[0], J[0], nlr, nx[0], ny[0]);
-        cudaDeviceSynchronize();        
-    }
-
-    update<<<grid_size[0], block_size>>>(T, deltaT[0], nx[0], ny[0], dx, dy);
-    cudaDeviceSynchronize();
-
-    compute_r_j<<<grid_size[0], block_size>>>(T, J[0], nlr, nx[0], ny[0], dx, dy, kc);
-    cudaDeviceSynchronize();
-    glob_resid = std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx[0] * ny[0], square(), 0.0, thrust::plus<double>()));
-    std::cout << "Loop = " << iloop << ", Ending residual = " << glob_resid << std::endl;
-
-    }
-
-
-    // double *h_R = new double[nx_f * ny_f];
-    // cudaMemcpy(h_R, nlr, nx_f * ny_f * sizeof(double), cudaMemcpyDeviceToHost);
-
-    // // Write h_R to a file 
-    // std::ofstream outfile("residual.txt");
-    // for (int j = 0; j < ny_f; ++j) {
-    //     for (int i = 0; i < nx_f; ++i) {
-    //         outfile << h_R[j * nx_f + i] << " ";
-    //     }
-    //     outfile << std::endl;
-    // }
-    // outfile.close();
-    // delete[] h_R;    
-
-    // double *h_T = new double[nx_f * ny_f];
-    // cudaMemcpy(h_T, T, nx_f * ny_f * sizeof(double), cudaMemcpyDeviceToHost);
-
-    // // Write h_T to a file
-    // std::ofstream tfile("temperature_output.txt");
-    // for (int j = 0; j < ny_f; ++j) {
-    //     for (int i = 0; i < nx_f; ++i) {
-    //         tfile << h_T[j * nx_f + i] << " ";
-    //     }
-    //     tfile << std::endl;
-    // }
-    // tfile.close();
-    // delete[] h_T;    
-
-    return 0;
 }
