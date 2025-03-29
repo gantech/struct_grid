@@ -25,3 +25,8 @@ cuda_add_executable(laplace_heat_jacobi LaplaceHeat.cu)
 set_target_properties(laplace_heat_jacobi PROPERTIES CUDA_ARCHITECTURES "90")
 target_link_libraries(laplace_heat_jacobi linear_solvers)
 install(TARGETS laplace_heat_jacobi DESTINATION bin)
+
+cuda_add_executable(lid_driven_cavity LidDrivenCavity.cu)
+set_target_properties(lid_driven_cavity PROPERTIES CUDA_ARCHITECTURES "90")
+target_link_libraries(lid_driven_cavity linear_solvers)
+install(TARGETS lid_driven_cavity DESTINATION bin)

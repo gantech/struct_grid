@@ -186,51 +186,6 @@ __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, doub
     }
 }
 
-
-// Kernel to compute matrix vector product of the linear system of equations J * v . 
-__global__ void compute_matvec(double * v, double * J, double * result, int nx, int ny) {
-
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
-
-    int idx_r = (j * nx) + i;
-    int idx_j = idx_r * 5;
-
-    if ( (i < nx) && (j < ny)) {
-
-        double jij = J[idx_j];
-        double jim1j = J[idx_j + 1];
-        double jip1j = J[idx_j + 2];
-        double jijm1 = J[idx_j + 3];
-        double jijp1 = J[idx_j + 4];
-
-        double vip1j = 0.0;
-        double vim1j = 0.0;
-        double vijp1 = 0.0;
-        double vijm1 = 0.0;
-
-        if ( i == 0) {
-            vip1j = v[idx_r + 1];
-        } else if ( i == (nx - 1)) {
-            vim1j = v[idx_r - 1];
-        } else {
-            vip1j = v[idx_r + 1];
-            vim1j = v[idx_r - 1];
-        }
-
-        if ( j == 0) {
-            vijp1 = v[idx_r + nx];
-        } else if ( j == (ny - 1)) {
-            vijm1 = v[idx_r - nx];
-        } else {
-            vijm1 = v[idx_r - nx];
-            vijp1 = v[idx_r + nx];
-        }
-
-        result[idx_r] = jim1j * vim1j + jip1j * vip1j + jijm1 * vijm1 + jijp1 * vijp1 + jij * v[idx_r];
-    }
-}
-
     LaplaceHeat::LaplaceHeat(int nx_inp, int ny_inp, double kc_inp, std::string solver_type) {
 
         nx = nx_inp;
@@ -261,6 +216,7 @@ __global__ void compute_matvec(double * v, double * J, double * result, int nx, 
         }
         
     }
+
 
     LaplaceHeat::~LaplaceHeat() {
 

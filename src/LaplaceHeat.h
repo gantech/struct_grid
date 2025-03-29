@@ -50,8 +50,6 @@ public:
 
     __host__ double compute_r();
 
-    __host__ void compute_matvec(double *v, double * result);
-
     __host__ void solve(int nsteps);
 
     int nx;
