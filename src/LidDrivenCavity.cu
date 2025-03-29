@@ -52,3 +52,11 @@ namespace LidDridenCavityNS {
     }
     
 }
+
+int main() {
+
+    LidDrivenCavityNS::LidDrivenCavity * lcav = new LidDrivenCavityNS::LidDrivenCavity(128, 384, 0.001);
+
+    delete lcav;
+    return 0;
+}
