@@ -256,11 +256,6 @@ __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, doub
         return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));              
     }
 
-    __host__ void LaplaceHeat::compute_matvec(double * v, double * result) {
-        LaplaceHeatNS::compute_matvec<<<grid_size, block_size>>>(v, J, result, nx, ny);
-        cudaDeviceSynchronize();
-    }
-
     __host__ void LaplaceHeat::solve(int nsteps) {
         for (int j = 0; j < nsteps; j++) {
             std::cout << "Solver step " << j << std::endl;

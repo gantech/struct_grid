@@ -24,10 +24,6 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
 // Kernel function for calculation of Residual - No tiling or shared memory
 __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, double dx, double dy, double kc);
 
-// Kernel function for computation of Matrix Vector product J * v
-// This function is likely needed to be passed to any LinearSolver class
-__global__ void compute_matvec(double * v, double * J, double * result, int nx, int ny);
-
 // Kernel function for Jacobi smoother - No tiling or shared memory
 __global__ void jacobi(double *deltaT, double * deltaT1, double *J, double *R, int nx, int ny);
 
