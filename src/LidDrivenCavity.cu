@@ -1,9 +1,9 @@
 #include <iostream>
 #include "LidDrivenCavity.h"
 
-namespace LidDridenCavityNS {
+namespace LidDrivenCavityNS {
 
-    LidDrivenCavity::LidDridenCavity(int nx_inp, int ny_inp, double nu_inp) {
+    LidDrivenCavity::LidDrivenCavity(int nx_inp, int ny_inp, double nu_inp) {
 
         nx = nx_inp;
         ny = ny_inp;
@@ -35,7 +35,7 @@ namespace LidDridenCavityNS {
 
     }
 
-    LidDridenCavity::~LidDrivenCavity() {
+    LidDrivenCavity::~LidDrivenCavity() {
 
         cudaFree(umom);
         cudaFree(vmom);
