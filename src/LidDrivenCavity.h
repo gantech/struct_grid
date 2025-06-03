@@ -55,6 +55,8 @@ public:
     double * umom;
     double * vmom;
     double * pres;
+    double * phi;
+    double * a_inv;
     double * u_nlr;
     double * v_nlr;
     double * cont_nlr;
