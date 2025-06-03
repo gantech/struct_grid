@@ -30,8 +30,6 @@ public:
     // Destructor
     ~LidDrivenCavity();
 
-    __host__ void initialize_const(double * arr, double val);
-
     __host__ void update_mom(double alpha_mom = 1.0);
 
     __host__ void update_pres(double alpha_p = 1.0);
