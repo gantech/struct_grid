@@ -1,8 +1,13 @@
 #include <iostream>
 #include "LidDrivenCavity.h"
+#include <cuda_runtime.h>
+#include <cudaTypedefs.h> // PFN_cuTensorMapEncodeTiled, CUtensorMap
+#include <cuda/barrier>
+
+using barrier = cuda::barrier<cuda::thread_scope_block>;
+namespace cde = cuda::device::experimental;
 
 namespace LidDrivenCavityNS {
-
 
 // Kernel function for initialization - No tiling or shared memory
 __global__ void initialize_const(double *T, double val, int nx, int ny) {
@@ -57,7 +62,13 @@ union SharedMemory {
 };
 
 template <const int BM, const int BN>
-__global__ void compute_rmom_j(double * u, double * v, double * p, double * a_inv,
+__global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_umom,
+                               const __grid_constant__ CUtensorMap tensor_map_vmom,
+                               const __grid_constant__ CUtensorMap tensor_map_p,
+                               const __grid_constant__ CUtensorMap tensor_map_a_inv,
+                               const __grid_constant__ CUtensorMap tensor_map_u_nlr,
+                               const __grid_constant__ CUtensorMap tensor_map_v_nlr,
+                               double * u, double * v, double * p, double * a_inv,
                                double * u_nlr, double * v_nlr, double * Jmom, 
                                int nx, int ny, double dx, double dy, 
                                double nu, double dt) {
@@ -77,6 +88,41 @@ __global__ void compute_rmom_j(double * u, double * v, double * p, double * a_in
     double * u_nlrs = a_invs + ((BM+4) * (BN+4)); 
     double * v_nlrs = u_nlrs + ((BM+4) * (BN+4));
     double * Jmoms = v_nlrs + ((BM+4) * (BN+4));
+
+    // Initialize shared memory barrier with the number of threads participating in the barrier.
+    #pragma nv_diag_suppress static_var_with_dynamic_init
+    __shared__ barrier bar_a[6];
+    if (threadIdx.x == 0) {
+        for (int i = 0; i < 6; i++) {
+          init(&bar_a[i], blockDim.x);
+        }
+        cde::fence_proxy_async_shared_cta();
+    }
+    __syncthreads();
+    barrier::arrival_token token[6];
+    if (threadIdx.x == 0) {
+        cde::cp_async_bulk_tensor_2d_global_to_shared(us, &tensor_map_umom, cCol * BN, cRow * BM, bar_a[0]);
+        token[0] = cuda::device::barrier_arrive_tx(bar_a[0], 1, (BM+4) * (BN+4) * sizeof(double));
+        cde::cp_async_bulk_tensor_2d_global_to_shared(vs, &tensor_map_vmom, cCol * BN, cRow * BM, bar_a[1]);
+        token[1] = cuda::device::barrier_arrive_tx(bar_a[1], 1, (BM+4) * (BN+4) * sizeof(double));
+        cde::cp_async_bulk_tensor_2d_global_to_shared(ps, &tensor_map_p, cCol * BN, cRow * BM, bar_a[2]);
+        token[2] = cuda::device::barrier_arrive_tx(bar_a[2], 1, (BM+4) * (BN+4) * sizeof(double));
+        cde::cp_async_bulk_tensor_2d_global_to_shared(a_invs, &tensor_map_a_inv, cCol * BN, cRow * BM, bar_a[3]);
+        token[3] = cuda::device::barrier_arrive_tx(bar_a[3], 1, (BM+4) * (BN+4) * sizeof(double));
+        cde::cp_async_bulk_tensor_2d_global_to_shared(u_nlrs, &tensor_map_u_nlr, cCol * BN, cRow * BM, bar_a[4]);
+        token[4] = cuda::device::barrier_arrive_tx(bar_a[4], 1, (BM+4) * (BN+4) * sizeof(double));
+        cde::cp_async_bulk_tensor_2d_global_to_shared(v_nlrs, &tensor_map_v_nlr, cCol * BN, cRow * BM, bar_a[5]);
+        token[5] = cuda::device::barrier_arrive_tx(bar_a[5], 1, (BM+4) * (BN+4) * sizeof(double));
+    } else {
+        for (int i = 0; i < 6; i++) {
+            token[i] = bar_a[i].arrive();
+        }
+    }
+
+    for (int i=0; i < 6; i++) {
+      bar_a[i].wait(std::move(token[i]));
+    }
+    
 
     double dx_inv = 1.0 / dx;
     double dy_inv = 1.0 / dy;
@@ -110,6 +156,12 @@ __global__ void compute_rmom_j(double * u, double * v, double * p, double * a_in
                     - (phi_s > 0.0 ? vs[sidx - (BN + 4)] : vs[sidx]           ) * phi_s
                     + (phi_n > 0.0 ? vs[sidx]            : vs[sidx + (BN + 4)]) * phi_n
                     - nu * ( 4.0 * vs[sidx] - vs[sidx-1] - vs[sidx+1] - vs[sidx - (BN + 4)] - vs[sidx + (BN + 4)]);
+
+
+  if (threadIdx.x == 0) {
+    for (int i = 0; i < 6; i++)
+      (&bar_a[i])->~barrier();
+  }                    
 
 }
 
@@ -153,6 +205,51 @@ __global__ void compute_rcont_j(double * u, double * v, double * p, double * a_i
     cont_nlrs[sidx] += phi_e - phi_w + phi_n - phi_s;
 }
 
+CUtensorMap get_tensor_map(double *A, const int M, const int N,
+                           const int BM, const int BN) {
+
+  CUtensorMap tensor_map_a{};
+  // rank is the number of dimensions of the array.
+  constexpr uint32_t rank = 2;
+  uint64_t size[rank] = {M, N};
+  // The stride is the number of bytes to traverse from the first element of one row to the next.
+  // It must be a multiple of 16.
+  uint64_t stride[rank - 1] = {(N) * sizeof(double)};
+  // The box_size is the size of the shared memory buffer that is used as the
+  // destination of a TMA transfer.
+  uint32_t box_size[rank] = {BN, BM};
+  // The distance between elements in units of sizeof(element). A stride of 2
+  // can be used to load only the real component of a complex-valued tensor, for instance.
+  uint32_t elem_stride[rank] = {1, 1};
+
+  // Get a function pointer to the cuTensorMapEncodeTiled driver API.
+  auto cuTensorMapEncodeTiled = get_cuTensorMapEncodeTiled();
+
+  // Create the tensor descriptor.
+  CUresult res_a = cuTensorMapEncodeTiled(
+    &tensor_map_a,                // CUtensorMap *tensorMap,
+    CUtensorMapDataType::CU_TENSOR_MAP_DATA_TYPE_FLOAT64,
+    rank,                       // cuuint32_t tensorRank,
+    A,                 // void *globalAddress,
+    size,                       // const cuuint64_t *globalDim,
+    stride,                     // const cuuint64_t *globalStrides,
+    box_size,                   // const cuuint32_t *boxDim,
+    elem_stride,                // const cuuint32_t *elementStrides,
+    // Interleave patterns can be used to accelerate loading of values that
+    // are less than 4 bytes long.
+    CUtensorMapInterleave::CU_TENSOR_MAP_INTERLEAVE_NONE,
+    // Swizzling can be used to avoid shared memory bank conflicts.
+    CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE,
+    // L2 Promotion can be used to widen the effect of a cache-policy to a wider
+    // set of L2 cache lines.
+    CUtensorMapL2promotion::CU_TENSOR_MAP_L2_PROMOTION_NONE,
+    // Don't set out-of-bounds elements to anything during TMA transfers
+    CUtensorMapFloatOOBfill::CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE
+  );
+
+  return tensor_map_a;
+
+}
 
 __host__ double LidDrivenCavity::compute_mom_r_j() {
   // Launch the kernel for computing the residuals
@@ -160,7 +257,14 @@ __host__ double LidDrivenCavity::compute_mom_r_j() {
   const uint BN = 32;
   int shared_memory_size = (BM + 4) * (BN + 4) * sizeof(double) * 11;  
   compute_rmom_j<BM,BN>
-        <<<grid_size, block_size, shared_memory_size>>>(umom, vmom, pres, a_inv, u_nlr, v_nlr, Jmom, nx, ny, dx, dy, nu, dt);
+        <<<grid_size, block_size, shared_memory_size>>>( get_tensor_map(umom, nx+4, ny+4, BM+4, BN+4),
+                                                       get_tensor_map(vmom, nx+4, ny+4, BM+4, BN+4),
+                                                       get_tensor_map(pres, nx+4, ny+4, BM+4, BN+4),
+                                                       get_tensor_map(a_inv, nx+4, ny+4, BM+4, BN+4),
+                                                       get_tensor_map(u_nlr, nx+4, ny+4, BM+4, BN+4),
+                                                       get_tensor_map(v_nlr, nx+4, ny+4, BM+4, BN+4),
+                                                       umom, vmom, pres, a_inv, u_nlr, v_nlr, Jmom, 
+                                                       nx, ny, dx, dy, nu, dt);
   return 1.0;
 }
 
