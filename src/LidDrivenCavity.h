@@ -52,6 +52,7 @@ public:
     double dx;
     double dy;
     double nu;
+    double dt;
 
     double * umom;
     double * vmom;

@@ -14,15 +14,19 @@ __global__ void initialize_const(double *T, double val, int nx, int ny) {
     
 }
 
-// Kernel function for initialization - No tiling or shared memory
-__global__ void initialize_rand(double *T, int nx, int ny) {
+// // Kernel function for initialization - No tiling or shared memory
+// __global__ void initialize_rand(double *T, int nx, int ny) {
 
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+//     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (idx < (nx * ny)) 
-        T[idx] = val * (double)rand() / (double)RAND_MAX;
+//     if (idx < (nx * ny))  {
+
+//         auto seed =  curand_init(seed, idx, 0, &states[idx]);
+
+//         T[idx] = (double )curand_uniform();
+//     }
     
-}
+// }
 
 // Kernel function for update - No tiling or shared memory
 __global__ void update(double *T, double *deltaT, int nx, int ny) {
@@ -155,7 +159,8 @@ __host__ double LidDrivenCavity::compute_mom_r_j() {
   const uint BM = 32;
   const uint BN = 32;
   int shared_memory_size = (BM + 4) * (BN + 4) * sizeof(double) * 11;  
-  compute_rmom_j<<<grid_size, block_size, shared_memory_size>>>(umom, vmom, pres, a_inv, u_nlr, v_nlr, Jmom, nx, ny, dx, dy);
+  compute_rmom_j<BM,BN>
+        <<<grid_size, block_size, shared_memory_size>>>(umom, vmom, pres, a_inv, u_nlr, v_nlr, Jmom, nx, ny, dx, dy, nu, dt);
   return 1.0;
 }
 
@@ -164,7 +169,8 @@ __host__ double LidDrivenCavity::compute_cont_r_j() {
   const uint BM = 32;
   const uint BN = 32;
   int shared_memory_size = (BM + 4) * (BN + 4) * sizeof(double) * 10;
-  compute_rcont_j<<<grid_size, block_size, shared_memory_size>>>(umom, vmom, pres, a_inv, cont_nlr, Jcont, nx, ny, dx, dy);
+  compute_rcont_j<BM, BN>
+        <<<grid_size, block_size, shared_memory_size>>>(umom, vmom, pres, a_inv, cont_nlr, Jcont, nx, ny, dx, dy);
   return 1.0;
 }
 
@@ -175,6 +181,7 @@ LidDrivenCavity::LidDrivenCavity(int nx_inp, int ny_inp, double nu_inp) {
     dx = 1.0 / nx;
     dy = 3.0 / ny;
     nu = nu_inp;
+    dt = 0.001;
     
     grid_size = dim3(nx, ny);
     block_size = dim3(32, 32);
@@ -200,10 +207,10 @@ LidDrivenCavity::LidDrivenCavity(int nx_inp, int ny_inp, double nu_inp) {
     t_vnlr = thrust::device_ptr<double>(v_nlr);
     t_cont_nlr = thrust::device_ptr<double>(cont_nlr);
 
-    initialize_rand<<<grid_size_1d, block_size_1d>>>(umom, nx+4, ny+4);
-    initialize_rand<<<grid_size_1d, block_size_1d>>>(vmom, nx+4, ny+4);
-    initialize_rand<<<grid_size_1d, block_size_1d>>>(pres, nx+4, ny+4);
-    initialize_rand<<<grid_size_1d, block_size_1d>>>(a_inv, nx+4, ny+4);
+    // initialize_rand<<<grid_size_1d, block_size_1d>>>(umom, nx+4, ny+4);
+    // initialize_rand<<<grid_size_1d, block_size_1d>>>(vmom, nx+4, ny+4);
+    // initialize_rand<<<grid_size_1d, block_size_1d>>>(pres, nx+4, ny+4);
+    // initialize_rand<<<grid_size_1d, block_size_1d>>>(a_inv, nx+4, ny+4);
     initialize_const<<<grid_size_1d, block_size_1d>>>(deltaU, 0.0, nx, ny);
     initialize_const<<<grid_size_1d, block_size_1d>>>(deltaV, 0.0, nx, ny);
     initialize_const<<<grid_size_1d, block_size_1d>>>(deltaP, 0.0, nx, ny);
@@ -234,7 +241,7 @@ int main() {
 
     LidDrivenCavityNS::LidDrivenCavity * lcav = new LidDrivenCavityNS::LidDrivenCavity(128, 384, 0.001);
 
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 1e6; i++) {
         lcav->compute_mom_r_j();
         lcav->compute_cont_r_j();
     }
