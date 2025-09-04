@@ -12,6 +12,9 @@ namespace LidDrivenCavityNS {
 // Kernel function for initialization - No tiling or shared memory
 __global__ void initialize_const(double *T, double val, int nx, int ny);
 
+// Kernel function for initialization - No tiling or shared memory
+__global__ void initialize_rand(double *T, int nx, int ny);
+
 // Kernel function for update - No tiling or shared memory
 __global__ void update(double *T, double *deltaT, double alpha, int nx, int ny);
 

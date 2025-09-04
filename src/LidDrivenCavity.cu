@@ -15,7 +15,7 @@ __global__ void initialize_const(double *T, double val, int nx, int ny) {
 }
 
 // Kernel function for initialization - No tiling or shared memory
-__global__ void initialize_rand(double *T, double val, int nx, int ny) {
+__global__ void initialize_rand(double *T, int nx, int ny) {
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -40,7 +40,7 @@ __device__ double face_flux_mom(double ul, double ur,
                                 double a_invl, double a_invr, 
                                 double deltaface, double deltaperp) {
     double df_inv = 1.0 / deltaface;
-    return flux = 0.5 * (  (ul + ur) 
+    return 0.5 * (  (ul + ur) 
                 + 0.5 * df_inv * (a_invl * (prr - pl) + a_invr * (pr - pll)) 
                 - (a_invl + a_invr) * (pr - pl) ) * deltaperp;
 }
@@ -88,10 +88,10 @@ __global__ void compute_rmom_j(double * u, double * v, double * p, double * a_in
     int sidx = (threadRow + 2) * (BN + 4) + threadCol + 2;
 
     // Step 2 - Compute Jmom, u_nlr and v_nlr
-    phi_w = face_flux_mom(us[sidx - 1], us[sidx],     ps[sidx - 1], ps[sidx],     ps[sidx - 2], ps[sidx + 1], a_invs[sidx - 1], a_invs[sidx],     dx, dy);
-    phi_e = face_flux_mom(us[sidx],     us[sidx + 1], ps[sidx],     ps[sidx + 1], ps[sidx - 1], ps[sidx + 2], a_invs[sidx],     a_invs[sidx + 1], dx, dy);
-    phi_s = face_flux_mom(vs[sidx - (BN + 4)], vs[sidx],            ps[sidx - (BN + 4)], ps[sidx],            ps[sidx - 2*(BN + 4)], ps[sidx + (BN + 4)],   a_invs[sidx - (BN + 4)], a_invs[sidx],            dy, dx);
-    phi_n = face_flux_mom(vs[sidx],            vs[sidx + (BN + 4)], ps[sidx],            ps[sidx + (BN + 4)], ps[sidx - (BN + 4)],   ps[sidx + 2*(BN + 4)], a_invs[sidx],            a_invs[sidx + (BN + 4)], dy, dx);
+    double phi_w = face_flux_mom(us[sidx - 1], us[sidx],     ps[sidx - 1], ps[sidx],     ps[sidx - 2], ps[sidx + 1], a_invs[sidx - 1], a_invs[sidx],     dx, dy);
+    double phi_e = face_flux_mom(us[sidx],     us[sidx + 1], ps[sidx],     ps[sidx + 1], ps[sidx - 1], ps[sidx + 2], a_invs[sidx],     a_invs[sidx + 1], dx, dy);
+    double phi_s = face_flux_mom(vs[sidx - (BN + 4)], vs[sidx],            ps[sidx - (BN + 4)], ps[sidx],            ps[sidx - 2*(BN + 4)], ps[sidx + (BN + 4)],   a_invs[sidx - (BN + 4)], a_invs[sidx],            dy, dx);
+    double phi_n = face_flux_mom(vs[sidx],            vs[sidx + (BN + 4)], ps[sidx],            ps[sidx + (BN + 4)], ps[sidx - (BN + 4)],   ps[sidx + 2*(BN + 4)], a_invs[sidx],            a_invs[sidx + (BN + 4)], dy, dx);
     
     u_nlrs[sidx] += dx * dy * dt_inv + 0.5 * (ps[sidx + 1] - ps[sidx - 1]) 
                     - (phi_w > 0.0 ? us[sidx-1] : us[sidx]) * phi_w
@@ -141,10 +141,10 @@ __global__ void compute_rcont_j(double * u, double * v, double * p, double * a_i
     int sidx = (threadRow + 2) * (BN + 4) + threadCol + 2;
 
     // Step 2 - Compute Jcont, cont_nlr
-    phi_w = face_flux_mom(us[sidx - 1], us[sidx],     ps[sidx - 1], ps[sidx],     ps[sidx - 2], ps[sidx + 1], a_invs[sidx - 1], a_invs[sidx],     dx, dy);
-    phi_e = face_flux_mom(us[sidx],     us[sidx + 1], ps[sidx],     ps[sidx + 1], ps[sidx - 1], ps[sidx + 2], a_invs[sidx],     a_invs[sidx + 1], dx, dy);
-    phi_s = face_flux_mom(vs[sidx - (BN + 4)], vs[sidx],            ps[sidx - (BN + 4)], ps[sidx],            ps[sidx - 2*(BN + 4)], ps[sidx + (BN + 4)],   a_invs[sidx - (BN + 4)], a_invs[sidx],            dy, dx);
-    phi_n = face_flux_mom(vs[sidx],            vs[sidx + (BN + 4)], ps[sidx],            ps[sidx + (BN + 4)], ps[sidx - (BN + 4)],   ps[sidx + 2*(BN + 4)], a_invs[sidx],            a_invs[sidx + (BN + 4)], dy, dx);
+    double phi_w = face_flux_mom(us[sidx - 1], us[sidx],     ps[sidx - 1], ps[sidx],     ps[sidx - 2], ps[sidx + 1], a_invs[sidx - 1], a_invs[sidx],     dx, dy);
+    double phi_e = face_flux_mom(us[sidx],     us[sidx + 1], ps[sidx],     ps[sidx + 1], ps[sidx - 1], ps[sidx + 2], a_invs[sidx],     a_invs[sidx + 1], dx, dy);
+    double phi_s = face_flux_mom(vs[sidx - (BN + 4)], vs[sidx],            ps[sidx - (BN + 4)], ps[sidx],            ps[sidx - 2*(BN + 4)], ps[sidx + (BN + 4)],   a_invs[sidx - (BN + 4)], a_invs[sidx],            dy, dx);
+    double phi_n = face_flux_mom(vs[sidx],            vs[sidx + (BN + 4)], ps[sidx],            ps[sidx + (BN + 4)], ps[sidx - (BN + 4)],   ps[sidx + 2*(BN + 4)], a_invs[sidx],            a_invs[sidx + (BN + 4)], dy, dx);
     
     cont_nlrs[sidx] += phi_e - phi_w + phi_n - phi_s;
 }
@@ -235,8 +235,8 @@ int main() {
     LidDrivenCavityNS::LidDrivenCavity * lcav = new LidDrivenCavityNS::LidDrivenCavity(128, 384, 0.001);
 
     for (int i = 0; i < 100; i++) {
-        lcav->compute_rmom_j();
-        lcav->compute_rcont_j();
+        lcav->compute_mom_r_j();
+        lcav->compute_cont_r_j();
     }
 
     delete lcav;
