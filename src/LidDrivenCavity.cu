@@ -77,7 +77,6 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
     const int cRow = blockIdx.y * BM;
     const int cCol = blockIdx.x * BN; 
 
-
     extern __shared__ SharedMemory shared_mem[];    
     double * us = reinterpret_cast<double*>(shared_mem);
     double * vs = us + ((BM+4) * (BN+4));
@@ -92,9 +91,9 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
 
     // Initialize shared memory barrier with the number of threads participating in the barrier.
     #pragma nv_diag_suppress static_var_with_dynamic_init
-    __shared__ barrier bar_a[6];
+    __shared__ barrier bar_a[4];
     if (threadIdx.x == 0) {
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 4; i++) {
           init(&bar_a[i], blockDim.x);
         }
         cde::fence_proxy_async_shared_cta();
@@ -110,17 +109,13 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
         token[2] = cuda::device::barrier_arrive_tx(bar_a[2], 1, (BM+4) * (BN+4) * sizeof(double));
         cde::cp_async_bulk_tensor_2d_global_to_shared(a_invs, &tensor_map_a_inv, cCol * BN, cRow * BM, bar_a[3]);
         token[3] = cuda::device::barrier_arrive_tx(bar_a[3], 1, (BM+4) * (BN+4) * sizeof(double));
-        cde::cp_async_bulk_tensor_2d_global_to_shared(u_nlrs, &tensor_map_u_nlr, cCol * BN, cRow * BM, bar_a[4]);
-        token[4] = cuda::device::barrier_arrive_tx(bar_a[4], 1, (BM+4) * (BN+4) * sizeof(double));
-        cde::cp_async_bulk_tensor_2d_global_to_shared(v_nlrs, &tensor_map_v_nlr, cCol * BN, cRow * BM, bar_a[5]);
-        token[5] = cuda::device::barrier_arrive_tx(bar_a[5], 1, (BM+4) * (BN+4) * sizeof(double));
     } else {
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 4; i++) {
             token[i] = bar_a[i].arrive();
         }
     }
 
-    for (int i=0; i < 6; i++) {
+    for (int i=0; i < 4; i++) {
       bar_a[i].wait(std::move(token[i]));
     }
 
@@ -157,12 +152,33 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
                     + (phi_n > 0.0 ? vs[sidx]            : vs[sidx + (BN + 4)]) * phi_n
                     - nu * ( 4.0 * vs[sidx] - vs[sidx-1] - vs[sidx+1] - vs[sidx - (BN + 4)] - vs[sidx + (BN + 4)]);
 
+    // Wait for shared memory writes to be visible to TMA engine.
+    cde::fence_proxy_async_shared_cta();
+    __syncthreads();
+    // After syncthreads, writes by all threads are visible to TMA engine.
 
-  if (threadIdx.x == 0) {
-    for (int i = 0; i < 6; i++)
-      (&bar_a[i])->~barrier();
-  }                    
+    // Initiate TMA transfer to copy shared memory to global memory
+    if (threadIdx.x == 0) {
+      cde::cp_async_bulk_tensor_2d_shared_to_global(&tensor_map_u_nlr, cCol * BN, cRow * BM,
+                                                    u_nlrs);
+      // Wait for TMA transfer to have finished reading shared memory.
+      // Create a "bulk async-group" out of the previous bulk copy operation.
+      cde::cp_async_bulk_commit_group();
+      // Wait for the group to have completed reading from shared memory.
+      cde::cp_async_bulk_wait_group_read<0>();
 
+      cde::cp_async_bulk_tensor_2d_shared_to_global(&tensor_map_v_nlr, cCol * BN, cRow * BM,
+                                                    v_nlrs);
+      // Wait for TMA transfer to have finished reading shared memory.
+      // Create a "bulk async-group" out of the previous bulk copy operation.
+      cde::cp_async_bulk_commit_group();
+      // Wait for the group to have completed reading from shared memory.
+      cde::cp_async_bulk_wait_group_read<0>();
+
+      for (int i = 0; i < 4; i++)
+        (&bar_a[i])->~barrier();
+    }                    
+  
 }
 
 template <const int BM, const int BN>
@@ -199,7 +215,7 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
         cde::fence_proxy_async_shared_cta();
     }
     __syncthreads();
-    barrier::arrival_token token[5];
+    barrier::arrival_token token[4];
     if (threadIdx.x == 0) {
         cde::cp_async_bulk_tensor_2d_global_to_shared(us, &tensor_map_umom, cCol * BN, cRow * BM, bar_a[0]);
         token[0] = cuda::device::barrier_arrive_tx(bar_a[0], 1, (BM+4) * (BN+4) * sizeof(double));
@@ -209,15 +225,13 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
         token[2] = cuda::device::barrier_arrive_tx(bar_a[2], 1, (BM+4) * (BN+4) * sizeof(double));
         cde::cp_async_bulk_tensor_2d_global_to_shared(a_invs, &tensor_map_a_inv, cCol * BN, cRow * BM, bar_a[3]);
         token[3] = cuda::device::barrier_arrive_tx(bar_a[3], 1, (BM+4) * (BN+4) * sizeof(double));
-        cde::cp_async_bulk_tensor_2d_global_to_shared(cont_nlrs, &tensor_map_cont_nlr, cCol * BN, cRow * BM, bar_a[4]);
-        token[4] = cuda::device::barrier_arrive_tx(bar_a[4], 1, (BM+4) * (BN+4) * sizeof(double));
     } else {
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 4; i++) {
             token[i] = bar_a[i].arrive();
         }
     }
 
-    for (int i=0; i < 5; i++) {
+    for (int i=0; i < 4; i++) {
       bar_a[i].wait(std::move(token[i]));
     }
 
@@ -241,11 +255,25 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
     
     cont_nlrs[sidx] += phi_e - phi_w + phi_n - phi_s;
 
-  if (threadIdx.x == 0) {
-    for (int i = 0; i < 5; i++)
-      (&bar_a[i])->~barrier();
-  }                    
+    // Wait for shared memory writes to be visible to TMA engine.
+    cde::fence_proxy_async_shared_cta();
+    __syncthreads();
+    // After syncthreads, writes by all threads are visible to TMA engine.
 
+    // Initiate TMA transfer to copy shared memory to global memory
+    if (threadIdx.x == 0) {
+      cde::cp_async_bulk_tensor_2d_shared_to_global(&tensor_map_cont_nlr, cCol * BN, cRow * BM,
+                                                    cont_nlrs);
+      // Wait for TMA transfer to have finished reading shared memory.
+      // Create a "bulk async-group" out of the previous bulk copy operation.
+      cde::cp_async_bulk_commit_group();
+      // Wait for the group to have completed reading from shared memory.
+      cde::cp_async_bulk_wait_group_read<0>();
+
+      for (int i = 0; i < 4; i++)
+        (&bar_a[i])->~barrier();
+    }                    
+  
 }
 
 
@@ -401,9 +429,9 @@ LidDrivenCavity::~LidDrivenCavity() {
 
 int main() {
 
-    LidDrivenCavityNS::LidDrivenCavity * lcav = new LidDrivenCavityNS::LidDrivenCavity(128, 384, 0.001);
+    LidDrivenCavityNS::LidDrivenCavity * lcav = new LidDrivenCavityNS::LidDrivenCavity(1280, 3840, 0.001);
 
-    for (int i = 0; i < 1e2; i++) {
+    for (int i = 0; i < 1e6; i++) {
         lcav->compute_mom_r_j();
         lcav->compute_cont_r_j();
     }
