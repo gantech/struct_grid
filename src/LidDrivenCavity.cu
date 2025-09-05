@@ -1,8 +1,9 @@
 #include <iostream>
 #include "LidDrivenCavity.h"
+#include <cuda.h>
+#include <cuda/barrier>
 #include <cuda_runtime.h>
 #include <cudaTypedefs.h> // PFN_cuTensorMapEncodeTiled, CUtensorMap
-#include <cuda/barrier>
 
 using barrier = cuda::barrier<cuda::thread_scope_block>;
 namespace cde = cuda::device::experimental;
@@ -205,6 +206,16 @@ __global__ void compute_rcont_j(double * u, double * v, double * p, double * a_i
     cont_nlrs[sidx] += phi_e - phi_w + phi_n - phi_s;
 }
 
+
+PFN_cuTensorMapEncodeTiled_v12000 get_cuTensorMapEncodeTiled() {
+  // Get pointer to cuTensorMapEncodeTiled
+  cudaDriverEntryPointQueryResult driver_status;
+  void* cuTensorMapEncodeTiled_ptr = nullptr;
+  cudaGetDriverEntryPointByVersion("cuTensorMapEncodeTiled", &cuTensorMapEncodeTiled_ptr, 12000, cudaEnableDefault, &driver_status);
+  assert(driver_status == cudaDriverEntryPointSuccess);
+  return reinterpret_cast<PFN_cuTensorMapEncodeTiled_v12000>(cuTensorMapEncodeTiled_ptr);
+}
+ 
 CUtensorMap get_tensor_map(double *A, const int M, const int N,
                            const int BM, const int BN) {
 
