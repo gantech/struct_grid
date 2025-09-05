@@ -123,7 +123,6 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
     for (int i=0; i < 6; i++) {
       bar_a[i].wait(std::move(token[i]));
     }
-    
 
     double dx_inv = 1.0 / dx;
     double dy_inv = 1.0 / dy;
@@ -167,7 +166,12 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
 }
 
 template <const int BM, const int BN>
-__global__ void compute_rcont_j(double * u, double * v, double * p, double * a_inv,
+__global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_umom,
+                               const __grid_constant__ CUtensorMap tensor_map_vmom,
+                               const __grid_constant__ CUtensorMap tensor_map_p,
+                               const __grid_constant__ CUtensorMap tensor_map_a_inv,
+                               const __grid_constant__ CUtensorMap tensor_map_cont_nlr,
+                               double * u, double * v, double * p, double * a_inv,
                                double * cont_nlr, double * Jcont, 
                                int nx, int ny, double dx, double dy) {
 
@@ -179,11 +183,43 @@ __global__ void compute_rcont_j(double * u, double * v, double * p, double * a_i
     double * vs = us + ((BM+4) * (BN+4));
     double * ps = vs + ((BM+4) * (BN+4));
     double * a_invs = ps + ((BM+4) * (BN+4));
-    // Continue to keep memory allocation for u_nlr, v_nlr and 
-    // Jmom as (BM+4)*(BN+4). However, I will only compute 
+    // Continue to keep memory allocation for cont_nlr and 
+    // Jcont as (BM+4)*(BN+4). However, I will only compute 
     // these for BM * BN cells.
     double * cont_nlrs = a_invs + ((BM+4) * (BN+4)); 
     double * Jconts = cont_nlrs + ((BM+4) * (BN+4));
+
+    // Initialize shared memory barrier with the number of threads participating in the barrier.
+    #pragma nv_diag_suppress static_var_with_dynamic_init
+    __shared__ barrier bar_a[5];
+    if (threadIdx.x == 0) {
+        for (int i = 0; i < 5; i++) {
+          init(&bar_a[i], blockDim.x);
+        }
+        cde::fence_proxy_async_shared_cta();
+    }
+    __syncthreads();
+    barrier::arrival_token token[5];
+    if (threadIdx.x == 0) {
+        cde::cp_async_bulk_tensor_2d_global_to_shared(us, &tensor_map_umom, cCol * BN, cRow * BM, bar_a[0]);
+        token[0] = cuda::device::barrier_arrive_tx(bar_a[0], 1, (BM+4) * (BN+4) * sizeof(double));
+        cde::cp_async_bulk_tensor_2d_global_to_shared(vs, &tensor_map_vmom, cCol * BN, cRow * BM, bar_a[1]);
+        token[1] = cuda::device::barrier_arrive_tx(bar_a[1], 1, (BM+4) * (BN+4) * sizeof(double));
+        cde::cp_async_bulk_tensor_2d_global_to_shared(ps, &tensor_map_p, cCol * BN, cRow * BM, bar_a[2]);
+        token[2] = cuda::device::barrier_arrive_tx(bar_a[2], 1, (BM+4) * (BN+4) * sizeof(double));
+        cde::cp_async_bulk_tensor_2d_global_to_shared(a_invs, &tensor_map_a_inv, cCol * BN, cRow * BM, bar_a[3]);
+        token[3] = cuda::device::barrier_arrive_tx(bar_a[3], 1, (BM+4) * (BN+4) * sizeof(double));
+        cde::cp_async_bulk_tensor_2d_global_to_shared(cont_nlrs, &tensor_map_cont_nlr, cCol * BN, cRow * BM, bar_a[4]);
+        token[4] = cuda::device::barrier_arrive_tx(bar_a[4], 1, (BM+4) * (BN+4) * sizeof(double));
+    } else {
+        for (int i = 0; i < 5; i++) {
+            token[i] = bar_a[i].arrive();
+        }
+    }
+
+    for (int i=0; i < 5; i++) {
+      bar_a[i].wait(std::move(token[i]));
+    }
 
     double dx_inv = 1.0 / dx;
     double dy_inv = 1.0 / dy;
@@ -204,6 +240,12 @@ __global__ void compute_rcont_j(double * u, double * v, double * p, double * a_i
     double phi_n = face_flux_mom(vs[sidx],            vs[sidx + (BN + 4)], ps[sidx],            ps[sidx + (BN + 4)], ps[sidx - (BN + 4)],   ps[sidx + 2*(BN + 4)], a_invs[sidx],            a_invs[sidx + (BN + 4)], dy, dx);
     
     cont_nlrs[sidx] += phi_e - phi_w + phi_n - phi_s;
+
+  if (threadIdx.x == 0) {
+    for (int i = 0; i < 5; i++)
+      (&bar_a[i])->~barrier();
+  }                    
+
 }
 
 
@@ -268,14 +310,14 @@ __host__ double LidDrivenCavity::compute_mom_r_j() {
   const uint BN = 32;
   int shared_memory_size = (BM + 4) * (BN + 4) * sizeof(double) * 11;  
   compute_rmom_j<BM,BN>
-        <<<grid_size, block_size, shared_memory_size>>>( get_tensor_map(umom, nx+4, ny+4, BM+4, BN+4),
-                                                       get_tensor_map(vmom, nx+4, ny+4, BM+4, BN+4),
-                                                       get_tensor_map(pres, nx+4, ny+4, BM+4, BN+4),
-                                                       get_tensor_map(a_inv, nx+4, ny+4, BM+4, BN+4),
-                                                       get_tensor_map(u_nlr, nx+4, ny+4, BM+4, BN+4),
-                                                       get_tensor_map(v_nlr, nx+4, ny+4, BM+4, BN+4),
-                                                       umom, vmom, pres, a_inv, u_nlr, v_nlr, Jmom, 
-                                                       nx, ny, dx, dy, nu, dt);
+        <<<grid_size, block_size, shared_memory_size>>>(get_tensor_map(umom, nx+4, ny+4, BM+4, BN+4),
+                                                        get_tensor_map(vmom, nx+4, ny+4, BM+4, BN+4),
+                                                        get_tensor_map(pres, nx+4, ny+4, BM+4, BN+4),
+                                                        get_tensor_map(a_inv, nx+4, ny+4, BM+4, BN+4),
+                                                        get_tensor_map(u_nlr, nx+4, ny+4, BM+4, BN+4),
+                                                        get_tensor_map(v_nlr, nx+4, ny+4, BM+4, BN+4),
+                                                        umom, vmom, pres, a_inv, u_nlr, v_nlr, Jmom, 
+                                                        nx, ny, dx, dy, nu, dt);
   return 1.0;
 }
 
@@ -285,7 +327,12 @@ __host__ double LidDrivenCavity::compute_cont_r_j() {
   const uint BN = 32;
   int shared_memory_size = (BM + 4) * (BN + 4) * sizeof(double) * 10;
   compute_rcont_j<BM, BN>
-        <<<grid_size, block_size, shared_memory_size>>>(umom, vmom, pres, a_inv, cont_nlr, Jcont, nx, ny, dx, dy);
+        <<<grid_size, block_size, shared_memory_size>>>(get_tensor_map(umom, nx+4, ny+4, BM+4, BN+4),
+                                                        get_tensor_map(vmom, nx+4, ny+4, BM+4, BN+4),
+                                                        get_tensor_map(pres, nx+4, ny+4, BM+4, BN+4),
+                                                        get_tensor_map(a_inv, nx+4, ny+4, BM+4, BN+4),
+                                                        get_tensor_map(cont_nlr, nx+4, ny+4, BM+4, BN+4),
+                                                        umom, vmom, pres, a_inv, cont_nlr, Jcont, nx, ny, dx, dy);
   return 1.0;
 }
 
@@ -356,7 +403,7 @@ int main() {
 
     LidDrivenCavityNS::LidDrivenCavity * lcav = new LidDrivenCavityNS::LidDrivenCavity(128, 384, 0.001);
 
-    for (int i = 0; i < 1e6; i++) {
+    for (int i = 0; i < 1e2; i++) {
         lcav->compute_mom_r_j();
         lcav->compute_cont_r_j();
     }
