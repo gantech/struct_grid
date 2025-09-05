@@ -16,17 +16,27 @@
 
 # add_subdirectory(airfoil)
 
+# ensure cuda is available
+include(CheckLanguage)
+check_language(CUDA)
+ 
+include_directories(${CUDA_INCLUDE_DIRS})
 
-cuda_add_library(linear_solvers STATIC LinearSolver.cu Jacobi.cu ADI.cu CG.cu Multigrid.cu)
-set_target_properties(linear_solvers PROPERTIES CUDA_ARCHITECTURES "90")
+add_library(linear_solvers STATIC LinearSolver.cu Jacobi.cu ADI.cu CG.cu Multigrid.cu)
+set_target_properties(linear_solvers PROPERTIES 
+    CUDA_ARCHITECTURES "90"
+    CUDA_SEPARABLE_COMPILATION ON
+)
+set_target_properties(linear_solvers PROPERTIES CUDA_ARCHITECTURES ${CUDA_COMPUTE_CAPABILITY})
 install(TARGETS linear_solvers DESTINATION lib)
 
-cuda_add_executable(laplace_heat_jacobi LaplaceHeat.cu)
-set_target_properties(laplace_heat_jacobi PROPERTIES CUDA_ARCHITECTURES "90")
+add_executable(laplace_heat_jacobi LaplaceHeat.cu)
+set_target_properties(laplace_heat_jacobi PROPERTIES CUDA_ARCHITECTURES ${CUDA_COMPUTE_CAPABILITY})
 target_link_libraries(laplace_heat_jacobi linear_solvers)
 install(TARGETS laplace_heat_jacobi DESTINATION bin)
 
-cuda_add_executable(lid_driven_cavity LidDrivenCavity.cu)
-set_target_properties(lid_driven_cavity PROPERTIES CUDA_ARCHITECTURES "90")
+add_executable(lid_driven_cavity LidDrivenCavity.cu)
+set_target_properties(lid_driven_cavity PROPERTIES CUDA_ARCHITECTURES ${CUDA_COMPUTE_CAPABILITY})
 target_link_libraries(lid_driven_cavity linear_solvers)
 install(TARGETS lid_driven_cavity DESTINATION bin)
+
