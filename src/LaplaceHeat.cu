@@ -246,7 +246,6 @@ __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, doub
     __host__ double LaplaceHeat::compute_r_j() {
         LaplaceHeatNS::compute_r_j<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy, kc);        
         cudaDeviceSynchronize();
-        std::cout << "Entering l2 norm calculation of compute_r_j" << std::endl;
         return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));        
     }
 
@@ -258,7 +257,6 @@ __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, doub
 
     __host__ void LaplaceHeat::solve(int nsteps) {
         for (int j = 0; j < nsteps; j++) {
-            std::cout << "Solver step " << j << std::endl;
             solver->solve_step();
     }
 
@@ -269,19 +267,20 @@ __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, doub
 
 int main() {
 
-    // std::ofstream resid_file_jacobi("jacobi_resid.txt");
-    // resid_file_jacobi << "Iter, Residual" << std::endl;
-    // LaplaceHeatNS::LaplaceHeat * ljacobi = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "Jacobi");
-    // ljacobi->initialize_const(300.0);
+    std::ofstream resid_file_jacobi("jacobi_resid.txt");
+    resid_file_jacobi << "Iter, Residual" << std::endl;
+    LaplaceHeatNS::LaplaceHeat * ljacobi = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "Jacobi");
+    ljacobi->initialize_const(ljacobi->T, 300.0);
     double * resid = new double[80];
-    // for (int i = 0; i < 80; i++) {
-    //     resid[i] = ljacobi->compute_r_j();
-    //     resid_file_jacobi << i << ", " << resid[i] << std::endl;
-    //     ljacobi->solve(1000); // Loops of Jacobi
-    //     ljacobi->update();
-    // }
-    // resid_file_jacobi.close();
-    // delete ljacobi;
+    for (int i = 0; i < 80; i++) {
+        ljacobi->initialize_const(ljacobi->deltaT, 0.0);
+        resid[i] = ljacobi->compute_r_j();
+        resid_file_jacobi << i << ", " << resid[i] << std::endl;
+        ljacobi->solve(100); // Loops of Jacobi
+        ljacobi->update();
+    }
+    resid_file_jacobi.close();
+    delete ljacobi;
 
     std::ofstream resid_file_adi("adi_resid.txt");
     resid_file_adi << "Iter, Residual" << std::endl;
