@@ -215,6 +215,8 @@ __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, doub
             solver = new ADINS::ADI(nx, ny, J, T, deltaT, nlr);
         } else if (solver_type == "MG" ) {
             solver = new MultiGridNS::MultiGrid(nx, ny, J, T, deltaT, nlr, 3, "Jacobi");
+        } else if (solver_type == "CG" ) {
+            solver = new CGNS::CG(nx, ny, J, T, deltaT, nlr);
         } else {
             std::cout << "Invalid solver type. Availabl solvers are Jacobi and ADI. " << std::endl;
             exit(1);
@@ -312,6 +314,21 @@ int main() {
     }
     resid_file_mg.close();
     delete lmg;
+
+    std::ofstream resid_file_cg("cg_resid.txt");
+    resid_file_cg << "Iter, Residual" << std::endl;
+    LaplaceHeatNS::LaplaceHeat * lcg = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "CG");
+    lcg->initialize_const(lcg->T, 300.0);
+    for (int i = 0; i < 80; i++) {
+        lcg->initialize_const(lcg->deltaT, 0.0);
+        resid[i] = lcg->compute_r_j();
+        resid_file_cg << "Iter = " << i << ", " << resid[i] << std::endl;
+        lcg->solve(100); // Loops of CG
+        lcg->update();
+    }
+    resid_file_cg.close();
+    delete lcg;
+
 
     return 0;
 

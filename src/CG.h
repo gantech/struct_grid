@@ -32,8 +32,8 @@ namespace CGNS {
             thrust::device_ptr<double> t_jpvec;
             thrust::device_ptr<double> t_resid;
 
-            dim3 grid_size_1d;
-            dim3 block_size_1d = 1024;
+            int grid_size_1d;
+            int block_size_1d = 1024;
 
     };
 
