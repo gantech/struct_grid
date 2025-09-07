@@ -64,7 +64,7 @@ __global__ void update_searchdir(double * pvec, double * R, double beta, int nto
         cudaFree(jpvec);
     }
 
-    __host__ void CG::solve_step() {
+    __host__ void CG::solve_step(int nsteps) {
 
         /*
         0.a Compute matvec Jpvec = J * pvec
@@ -82,15 +82,17 @@ __global__ void update_searchdir(double * pvec, double * R, double beta, int nto
 
         */
 
-        matvec(pvec, jpvec);
-        double rsqr = thrust::transform_reduce(t_resid, t_resid + ntot, square(), 0.0, thrust::plus<double>());
-        double alpha_denom = thrust::inner_product(t_pvec, t_pvec + ntot, t_jpvec, 0.0, thrust::plus<double>(), thrust::multiplies<double>());
-        double alpha = rsqr / alpha_denom;
-        update_deltat_r<<<grid_size_1d, 1024>>>(deltaT, pvec, R, jpvec, alpha, ntot);
-        // In the future insert preconditioner here
-        double rnewsqr = thrust::transform_reduce(t_resid, t_resid + ntot, square(), 0.0, thrust::plus<double>());
-        double beta = rnewsqr / rsqr;
-        update_searchdir<<<grid_size_1d, 1024>>>(pvec, R, beta, ntot);
+        for (int istep = 0; istep < nsteps; istep++) {
+            matvec(pvec, jpvec);
+            double rsqr = thrust::transform_reduce(t_resid, t_resid + ntot, square(), 0.0, thrust::plus<double>());
+            double alpha_denom = thrust::inner_product(t_pvec, t_pvec + ntot, t_jpvec, 0.0, thrust::plus<double>(), thrust::multiplies<double>());
+            double alpha = rsqr / alpha_denom;
+            update_deltat_r<<<grid_size_1d, 1024>>>(deltaT, pvec, R, jpvec, alpha, ntot);
+            // In the future insert preconditioner here
+            double rnewsqr = thrust::transform_reduce(t_resid, t_resid + ntot, square(), 0.0, thrust::plus<double>());
+            double beta = rnewsqr / rsqr;
+            update_searchdir<<<grid_size_1d, 1024>>>(pvec, R, beta, ntot);
+        }
         
     }
 

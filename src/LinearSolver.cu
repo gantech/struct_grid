@@ -1,5 +1,6 @@
 #include "LinearSolver.h"
 #include <cmath>
+#include <iostream>
 namespace LinearSolverNS {
 
 // Kernel to compute matrix vector product of the linear system of equations J * v . 
@@ -48,6 +49,8 @@ __global__ void compute_matvec(double * v, double * J, double * result, int nx, 
 
 // Kernel to compute residual of linear system of equations R - J * deltaT
 __global__ void compute_linresid(double * deltaT, double * J, double * R, double * lin_resid, int nx, int ny) {
+
+
 
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;

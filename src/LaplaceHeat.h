@@ -5,6 +5,7 @@
 #include "LinearSolver.h"
 #include "Jacobi.h"
 #include "ADI.h"
+#include "Multigrid.h"
 #include <thrust/device_vector.h>
 
 namespace LaplaceHeatNS {

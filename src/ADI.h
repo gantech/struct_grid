@@ -20,7 +20,7 @@ namespace ADINS {
             ~ADI() {}
 
             // Solver
-            __host__ void solve_step() override;
+            __host__ void solve_step(int nsteps) override;
 
     };
 }

@@ -20,9 +20,9 @@ __global__ void initialize_const(double *T, double val, int nx, int ny) {
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (idx < (nx * ny)) 
+    if (idx < (nx * ny))
         T[idx] = val ;
-    
+
 }
 
 // Kernel function for initialization - No tiling or shared memory
@@ -37,15 +37,17 @@ __global__ void initialize_ref(double *T, int nx, int ny, double dx, double dy) 
         double x = (0.5 + row) * dx;
         T[(col * nx) + row] = 300.0 + x*x + (y*y*y)/ 27.0;
     }
-    
+
 }
 // Kernel function for update - No tiling or shared memory
 __global__ void update(double *T, double *deltaT, int nx, int ny) {
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (idx < (nx * ny)) 
+    if (idx < (nx * ny)) {
         T[idx] += deltaT[idx];
+        // printf("idx = %d, deltaT = %d, %d \n", idx, std::isnan(deltaT[idx]), (std::abs(deltaT[idx]) < 10.0));
+    }
 
 }
 
@@ -56,7 +58,7 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
     int col = blockIdx.y * blockDim.y + threadIdx.y;
 
     if ((row < nx) && (col < ny)) {
-        
+
         double y = (0.5 + col) * dy;
         double x = (0.5 + row) * dx;
         int idx_r = (col * nx) + row;
@@ -116,8 +118,9 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
         double tmp = kc * ( jijm1 * tijm1 + jijp1 * tijp1 + jim1j * tim1j + jip1j * tip1j + jij * T[idx_r] - (2.0 + 2.0 * y / 9.0) * dx * dy) + radd;
 
         // if (std::abs(tmp/(dx * dy * kc)) > 20.0) {
-        //     printf("Row, Col is %d, %d - x,y = %f, %f, Residuals - %f, %f, J - (j-1) %f, (j+1) %f, (i-1) %f, (i+1) %f, (ij) %f, T - (j-1) %f, (j+1) %f, (i-1) %f, (i+1) %f, (ij) %f \n", row, col, x, y, 2.0 - 2.0 * y / 9.0, tmp / (dx * dy * kc), jijm1, jijp1, jim1j, jip1j, jij, tijm1, tijp1, tim1j, tip1j, T[idx_r]);
-        // }
+        if (std::isnan(tmp)) {
+           printf("Row, Col is %d, %d - x,y = %f, %f, Residuals - %f, %f, J - (j-1) %f, (j+1) %f, (i-1) %f, (i+1) %f, (ij) %f, T - (j-1) %f, (j+1) %f, (i-1) %f, (i+1) %f, (ij) %f \n", row, col, x, y, 2.0 - 2.0 * y / 9.0, tmp, jijm1, jijp1, jim1j, jip1j, jij, tijm1, tijp1, tim1j, tip1j, T[idx_r]);
+        }
 
         R[idx_r] = -tmp;
 
@@ -137,7 +140,7 @@ __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, doub
     int col = blockIdx.y * blockDim.y + threadIdx.y;
 
     if ((row < nx) && (col < ny)) {
-        
+
         double y = (0.5 + col) * dy;
         double x = (0.5 + row) * dx;
         int idx_r = (col * nx) + row;
@@ -172,7 +175,7 @@ __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, doub
             tijp1 = T[idx_r + nx];
             double t_bc_bot = 300.0 + (x*x);
             radd += kc * 8.0 * t_bc_bot / 3.0;
-        } else if (col == (ny - 1)) {            
+        } else if (col == (ny - 1)) {
             tijm1 = T[idx_r - nx];
             double t_bc_top = 300.0 + 1.0 + (x*x);
             radd += kc * 8.0 * t_bc_top / 3.0;
@@ -198,23 +201,25 @@ __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, doub
 
         t_nlr = thrust::device_ptr<double>(nlr);
 
-        double dx = 1.0 / double(nx);
-        double dy = 3.0 / double(ny);
-
+        dx = 1.0 / double(nx);
+        dy = 3.0 / double(ny);
+        
         grid_size = dim3(nx, ny);
         block_size = dim3(32, 32);
 
-        grid_size_1d = dim3( ceil (nx * ny / 1024.0) );       
+        grid_size_1d = dim3( ceil (nx * ny / 1024.0) );
 
         if (solver_type == "Jacobi") {
             solver = new JacobiNS::Jacobi(nx, ny, J, T, deltaT, nlr);
         } else if (solver_type == "ADI" ) {
             solver = new ADINS::ADI(nx, ny, J, T, deltaT, nlr);
+        } else if (solver_type == "MG" ) {
+            solver = new MultiGridNS::MultiGrid(nx, ny, J, T, deltaT, nlr, 3, "Jacobi");
         } else {
             std::cout << "Invalid solver type. Availabl solvers are Jacobi and ADI. " << std::endl;
             exit(1);
         }
-        
+
     }
 
 
@@ -244,34 +249,32 @@ __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, doub
     }
 
     __host__ double LaplaceHeat::compute_r_j() {
-        LaplaceHeatNS::compute_r_j<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy, kc);        
+        LaplaceHeatNS::compute_r_j<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy, kc);
         cudaDeviceSynchronize();
-        return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));        
+        return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));
     }
 
     __host__ double LaplaceHeat::compute_r() {
         LaplaceHeatNS::compute_r<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy, kc);
         cudaDeviceSynchronize();
-        return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));              
+        return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));
     }
 
     __host__ void LaplaceHeat::solve(int nsteps) {
-        for (int j = 0; j < nsteps; j++) {
-            solver->solve_step();
+        solver->solve_step(nsteps);
     }
-
-}
 
 }
 
 
 int main() {
 
+    double * resid = new double[80];
+
     std::ofstream resid_file_jacobi("jacobi_resid.txt");
     resid_file_jacobi << "Iter, Residual" << std::endl;
     LaplaceHeatNS::LaplaceHeat * ljacobi = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "Jacobi");
     ljacobi->initialize_const(ljacobi->T, 300.0);
-    double * resid = new double[80];
     for (int i = 0; i < 80; i++) {
         ljacobi->initialize_const(ljacobi->deltaT, 0.0);
         resid[i] = ljacobi->compute_r_j();
@@ -296,7 +299,20 @@ int main() {
     resid_file_adi.close();
     delete ladi;
 
-    return 0;
-    
-}
+    std::ofstream resid_file_mg("mg_resid.txt");
+    resid_file_mg << "Iter, Residual" << std::endl;
+    LaplaceHeatNS::LaplaceHeat * lmg = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "MG");
+    lmg->initialize_const(lmg->T, 300.0);
+    for (int i = 0; i < 80; i++) {
+        lmg->initialize_const(lmg->deltaT, 0.0);
+        resid[i] = lmg->compute_r_j();
+        resid_file_mg << "Iter = " << i << ", " << resid[i] << std::endl;
+        lmg->solve(100); // Loops of MG
+        lmg->update();
+    }
+    resid_file_mg.close();
+    delete lmg;
 
+    return 0;
+
+}

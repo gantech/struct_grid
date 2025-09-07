@@ -20,7 +20,7 @@ namespace CGNS {
             ~CG();
 
             // Solver
-            __host__ void solve_step() override;
+            __host__ void solve_step(int nsteps) override;
 
 
         private:
@@ -33,7 +33,7 @@ namespace CGNS {
             thrust::device_ptr<double> t_resid;
 
             dim3 grid_size_1d;
-            dim3 block_size_1d = 1024;            
+            dim3 block_size_1d = 1024;
 
     };
 
@@ -42,4 +42,3 @@ namespace CGNS {
 
 
 #endif // JACOBI
-
