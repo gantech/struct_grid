@@ -31,6 +31,6 @@ On a side note, getting the L2 norm of an array to calculate the residual is a r
 
 Here's a plot comparing the convergence of the 4 different solvers on the the Poisson equation with `128 x 384` cells. As expected multigrid performs exceedingly well.
 
-![Convergence of different linear solvers](residual_plot.png)
+![Convergence of different linear solvers](assets/residual_plot.png)
 
 *Figure 1: Convergence of different linear solvers for Poisson equation on 128 x 384 grid.*
