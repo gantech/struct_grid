@@ -7,73 +7,9 @@ The goal of this series of exercises is to build a computational aerodynamics so
 2. The airfoil mesh must be an O-type mesh with a single structured block in two dimensions (x,y).
 3. The solver must run on Nvidia GPU's using the CUDA programming model in C++.
 
-Since I have no knowledge of programming on GPU's or writing a computational aerodynamics solver from scratch, I have done the following to learn CUDA programming and build expertise in various toolsets required to achieve this objective.
 
-Alternating Direction Implicit solution of linear systems of equations
-----------------------------------------------------------------------
+Here's what exists so far:
 
-The solution of linear system of equations is at the heart of this whole exercise and is expected to consume the largest amount of computational time. To prepare myself, I wrote a simple code in python that solves the laplace equation $k_c \nabla^2 T = k_c(2 + 2 y / 9 )$. The solution to this set of equations is $T = 300.0 + x^2 + (y/3)^3$. These equations are to be solved a on a rectangular domain $(0,0) \leq (x,y) \leq (1,3)$. The boundary conditions are Dirichlet on the left ($x=0$) and bottom ($y=0$) boundaries and specified gradient boundary conditions on the right ($x=1$) and top ($y=3$). The finite volume method is used to discretize the equations on $nx \times ny$ cells. The discretization of the grid is expected to be such that $dx = dy$, so you would need $ny = 3 \; nx$. The discretized equation at each cell becomes
-```math
-    k_c \left (T_{i,j-1} + T_{i,j+1} + T_{i-1,j} + T_{i+1,j} - 4.0 * T_{i,j} \right ) = k_c \left ( 2.0 + 2.0 * y / 9.0 \right ) dx \; dy.
-```
-These equations are solved using the Newton-Raphson method and Alternating Direction Implicity scheme as follows. The residual $R$ at each cell is
-```math
- R_{i,j} =  k_c \left (T_{i,j-1} + T_{i,j+1} + T_{i-1,j} + T_{i+1,j} - 4.0 * T_{i,j} \right ) - k_c \left ( 2.0 + 2.0 * y / 9.0 \right ) dx \; dy.
-```
-The Newton-Raphson iteration for each compuation of the residual $R$ with a given field $T$ produces an update $\Delta T$ as 
-```math
-\frac{\partial R}{\partial T} \Delta T = -R.
-```
-The Jacobian $ \frac{\partial R}{\partial T}$ is stored in a 2-D array $J$ of shape $(nx,ny,5)$ where the last index stores the derivatives of the residual $R_{ij}$ with respect to the state variable $T$ at $i,j$, $i-1,j$, $i+1,j$, $i,j-1$, $i,j+1$ in that order. Looking back, I should've probly ordered the $J$ array as $(5,nx,ny)$.
+1. Capability to solve the Laplace heat equation with a nonlinear source term that drives a desired solution using method of manufactured solutions. Uses an object oriented approach to selecting different solvers for the Laplace heat problem and compare them.
 
-This file can be found at [python/try_adi.py](python/try_adi.py). 
-
-TODO
-
-1. Add plot of residual convergence with iterations and a contour plot of the solution.
-
-
-ADI in CUDA
------------
-
-Now, I implement the same ADI algorithm in CUDA C++. Since multi-dimensional arrays are not natively available in CUDA, I use a column major order to store arrays `idx[i,j] = j * nx + i`. For the Jacobian vector `j_idx[i,j,k] = (j * nx + i) * 5 + k`. Since there are no for loops, the block sizes are defined using `#define TILE_SIZE 16`. The same block sizes are used for both $i$ and $j$ directions.
-
-This can be found at [src/try_adi.cu](src/try_adi.cu). 
-
-
-Moving to curvilinear coordinates
----------------------------------
-
-The logical next step is to make sure that we can compute simple gradients on curvilinear meshes. After thorough consideration of using equations transformed to a cartesian reference coordinate system using Jacobian transformations, I decided to forgo this approach and stick to traditional methods using Green-Gauss theorem as 
-```math
- \int_V \frac{\partial \phi}{\partial x} \; \textrm{d}V = \int_S \phi \; ( \hat{i} \cdot \hat{n} ) \; \textrm{d}S.
-```
-In discrete terms in two dimensions the partial derivative at the cell center will become,
-```math
-\frac{\partial \phi}{\partial x} = \frac{1}{A} \sum_{\textrm{faces}} \phi_f  ( \hat{i} \cdot \vec{S} ),
-```
-where $\vec{S}$ is the area of the faces and $A$ is the area of the cell. In this first implementation, the value of the field at the cell $\phi_f$ is simply written as the average of the values at the neighboring cell centers as
-```math
-\phi_f = \frac{1}{2} ( \phi_C + \phi_{\textrm{nei}}).
-```
-I read the coordinates into `h_pts` and transfer to device. A field with a known gradient is initialized on device as $\phi = x^2 + y^3$. The reference gradient field is evaluated on device at the cell centers as well. The  output is written into the legacy vtk format. This implementation can be found at [src/airfoil/airfoil.cu](src/airfoil/airfoil.cu).
-
-
-Improved gradient computation on airfoil meshes using linear interpolation
---------------------------------------------------------------------------
-
-In this step, we improve the interpolation of a field to the faces using linear interpolation. This can be found at [src/airfoil/airfoil_2.cu](src/airfoil/airfoil_2.cu). On this mesh, the highest deviation of the interpolating factor from 0.5 was around 0.04. So the lowest was around 0.46.
-
-
-
-Improved gradient computation on airfoil meshes using explicit gradient calculations
-------------------------------------------------------------------------
-
-In this step, we try using an explicit gradient correction to the interpolation of a field to the faces as 
-
-```math
-\phi_f = \frac{1}{2} (\phi_C + phi_{\textrm{nei}}) + \frac{1}{2} (\nabla \phi_C + \nabla \phi_{\textrm{nei}}) \cdot (\vec{r}_f - \frac{1}{2}(\vec{r}_C + \vec{r}_{\textrm{nei}})).
-```
-In the first iteration, the gradient is initialized to 0, so this approach would return the same value as the first implementation. However, in subsequent iterations, the gradient calculation is expected to improve in cells where the midpoint of the line connecting the cell centers does not coincide with the center of the face. In practice, this was found to yield no credible improvement after the second iteration. Also, there are issues of repeatablity as the update to the gradient in one thread will impact the result of another thread. Since the order of execution of threads can't be guaranteed, the only way to ensure repeatability is to declare and allocate memory for 2 copies of this field and switch every iteration. OpenFOAM doesn't adopt this approach. I think it's a nice exercise, but not worth implementation in a production code. This can be found at [src/airfoil/airfoil_3.cu](src/airfoil/airfoil_3.cu).
-
-
+2. Algorithms to calculate gradient using Gauss method as well as a Laplacian on curvilinear structured meshes.
