@@ -22,11 +22,11 @@ Since I have no prior knowledge of programming on GPU's or writing a computation
 
 1. Solve the Laplace heat equation with a nonlinear source term that drives a desired solution using method of manufactured solutions. For some reason Alternating Direction Implicit schemes have always attracted my attention for computational aerodynamics on RANS grids. I assumed that a direct solver in the wall-normal direction on stretched grids will help overcome the stiffness of the assembled RANS equations in the most efficient manner. So I implemented this first.
 
-2. Implement algorithms to calculate gradient using Gauss method as well as a Laplacian.
+2. Implement algorithms to calculate gradient using Gauss method as well as a Laplacian. Details are available [here](airfoils.md)
 
 3. Realize that achieving computational efficiency on CUDA requires a different thinking and read up on blog posts by [Simon Boehm](https://siboehm.com/articles/22/CUDA-MMM), [Alex Armbruster](https://alexarmbr.github.io/2024/08/10/How-To-Write-A-Fast-Matrix-Multiplication-From-Scratch-With-Tensor-Cores.html), [Aman Salykova](https://salykova.github.io/sgemm-gpu). Realize CFD algorithms will always be memory bound using arithmetic intensity calculations. Implement [convolution in CUDA](https://gantech.github.io/convolution_cuda/) as a stepping stone to implementing CFD algorithms.
 
-3. Finish implementing an object oriented approach to selecting different solvers for the Laplace heat problem and compare them.
+3. Finish implementing an object oriented approach to selecting different solvers for the Laplace heat problem and compare them. Details are available [here](airfoils.md).
 
 4. Work in progress: Implementing an incompressible laminar flow CFD solver to solve the lid-driven cavity problem.
 
