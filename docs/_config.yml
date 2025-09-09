@@ -1,24 +1,9 @@
 remote_theme: slatedocs/slate
-title: StructGridCUDA Documentation
-description: Documentation for the StructGridCUDA computational fluid dynamics framework
-baseurl: "/struct_grid" # the subpath of your site
-url: "https://gantech.github.io" # GitHub Pages URL
-
-# Build settings
-markdown: kramdown
-highlighter: rouge
-
-# Exclude from processing
-exclude:
-  - Gemfile
-  - Gemfile.lock
-  - node_modules
-  - vendor
-  
-# Additional settings
-sass:
-  style: compressed
-
-# Extra styles
-extra_css:
-  - stylesheets/custom.css
+title: Learning CUDA programming to run on structured curvilinear meshes
+description: Learning CUDA programming to run on structured curvilinear meshes
+remote_theme: pages-themes/slate@v0.2.0
+plugins:
+- jekyll-remote-theme
+show_downloads: true
+github:
+  repository_url: https://github.com/gantech/struct_grid
