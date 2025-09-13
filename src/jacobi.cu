@@ -61,12 +61,14 @@ __global__ void jacobi_kernel(double *deltaT, double * deltaT1, double *J, doubl
         cudaFree(deltaT1);
     }
 
-    __host__ void Jacobi::solve_step() {
+    __host__ void Jacobi::solve_step(int nsteps) {
 
-        jacobi_kernel<<<grid_size, block_size>>>(deltaT, deltaT1, J, R, nx, ny);
-        cudaDeviceSynchronize();
-        jacobi_kernel<<<grid_size, block_size>>>(deltaT1, deltaT, J, R, nx, ny);
-        cudaDeviceSynchronize();                
+        for (int istep = 0; istep < nsteps; istep++) {
+            jacobi_kernel<<<grid_size, block_size>>>(deltaT, deltaT1, J, R, nx, ny);
+            cudaDeviceSynchronize();
+            jacobi_kernel<<<grid_size, block_size>>>(deltaT1, deltaT, J, R, nx, ny);
+            cudaDeviceSynchronize();
+        }
     }
 
 }
