@@ -5,12 +5,12 @@ namespace JacobiNS {
 // Kernel function for Jacobi smoother - No tiling or shared memory
 __global__ void jacobi_kernel(double *deltaT, double * deltaT1, double *J, double *R, int nx, int ny) {
 
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    int col = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (( i < nx) && (j < ny)) {
+    if ((col < nx) && (row < ny)) {
         
-        int idx_r = (j * nx) + i;
+        int idx_r = (row * nx) + col;
         int idx_j = idx_r * 5;
 
         double jij = J[idx_j];

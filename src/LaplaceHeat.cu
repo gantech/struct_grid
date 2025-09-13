@@ -25,20 +25,26 @@ __global__ void initialize_const(double *T, double val, int nx, int ny) {
 
 }
 
+// Kernel function for reference temperature solution
+__device__ double ref_temp(double x, double y) {
+    return 300.0 + x*x + (y*y*y)/ 27.0;
+}
+
+
 // Kernel function for initialization - No tiling or shared memory
 __global__ void initialize_ref(double *T, int nx, int ny, double dx, double dy) {
 
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    int col = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (idx < (nx * ny)) {
-        int row = idx % nx;
-        int col = idx / nx;
-        double y = (0.5 + col) * dy;
-        double x = (0.5 + row) * dx;
-        T[(col * nx) + row] = 300.0 + x*x + (y*y*y)/ 27.0;
+    if ((col < nx) && (row < ny)) {
+        double y = (0.5 + row) * dy;
+        double x = (0.5 + col) * dx;
+        T[(row * nx) + col] = ref_temp(x, y);
     }
 
 }
+
 // Kernel function for update - No tiling or shared memory
 __global__ void update(double *T, double *deltaT, int nx, int ny) {
 
@@ -57,11 +63,11 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     int col = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if ((row < nx) && (col < ny)) {
+    if ((col < nx) && (row < ny)) {
 
-        double y = (0.5 + col) * dy;
-        double x = (0.5 + row) * dx;
-        int idx_r = (col * nx) + row;
+        double y = (0.5 + row) * dy;
+        double x = (0.5 + col) * dx;
+        int idx_r = (row * nx) + col;
         int idx_j = idx_r * 5;
 
         double jij = -4.0;
@@ -76,39 +82,35 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
         double tijm1 = 0.0;
 
         double radd = 0.0;
-        if (row == 0) {
+        if (col == 0) {
             jij -= 2.0;
             jip1j += 0.3333333333333333 ;
             jim1j -= 1.0;
             tip1j = T[idx_r + 1];
-            double t_bc_left = 300.0 + (y*y*y/27.0);
-            radd += kc * 8.0 * t_bc_left / 3.0 ;
-        } else if (row == (nx - 1)) {
+            radd += kc * 8.0 * ref_temp(0.0, y) / 3.0 ;
+        } else if (col == (nx - 1)) {
             jij -= 2.0;
             jim1j += 0.3333333333333333;
             jip1j -= 1.0;
             tim1j = T[idx_r - 1];
-            double t_bc_right = 300.0 + 1.0 + (y*y*y/27.0);
-            radd += kc * 8.0 * t_bc_right / 3.0;
+            radd += kc * 8.0 * ref_temp(1.0, y) / 3.0;
         } else {
             tip1j = T[idx_r + 1];
             tim1j = T[idx_r - 1];
         }
 
-        if (col == 0) {
+        if (row == 0) {
             jij -= 2.0;
             jijp1 += 0.3333333333333333;
             jijm1 -= 1.0;
             tijp1 = T[idx_r + nx];
-            double t_bc_bot = 300.0 + (x*x);
-            radd += kc * 8.0 * t_bc_bot / 3.0;
-        } else if (col == (ny - 1)) {
+            radd += kc * 8.0 * ref_temp(x, 0.0) / 3.0;
+        } else if (row == (ny - 1)) {
             jij -= 2.0;
             jijm1 += 0.3333333333333333;
             jijp1 -= 1.0;
             tijm1 = T[idx_r - nx];
-            double t_bc_top = 300.0 + 1.0 + (x*x);
-            radd += kc * 8.0 * t_bc_top / 3.0;
+            radd += kc * 8.0 * ref_temp(x, 1.0) / 3.0;
         } else {
             tijm1 = T[idx_r - nx];
             tijp1 = T[idx_r + nx];
@@ -133,62 +135,6 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
     }
 }
 
-// Kernel function for calculation of Residual - No tiling or shared memory
-__global__ void compute_r(double *T, double * J, double *R, int nx, int ny, double dx, double dy, double kc) {
-
-    int row = blockIdx.x * blockDim.x + threadIdx.x;
-    int col = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if ((row < nx) && (col < ny)) {
-
-        double y = (0.5 + col) * dy;
-        double x = (0.5 + row) * dx;
-        int idx_r = (col * nx) + row;
-        int idx_j = idx_r * 5;
-
-        double jij = J[idx_j];
-        double jim1j = J[idx_j + 1];
-        double jip1j = J[idx_j + 2];
-        double jijm1 = J[idx_j + 3];
-        double jijp1 = J[idx_j + 4];
-
-        double tip1j = 0.0;
-        double tim1j = 0.0;
-        double tijp1 = 0.0;
-        double tijm1 = 0.0;
-
-        double radd = 0.0;
-        if (row == 0) {
-            tip1j = T[idx_r + 1];
-            double t_bc_left = 300.0 + (y*y*y/27.0);
-            radd += kc * 8.0 * t_bc_left / 3.0 ;
-        } else if (row == (nx - 1)) {
-            tim1j = T[idx_r - 1];
-            double t_bc_right = 300.0 + 1.0 + (y*y*y/27.0);
-            radd += kc * 8.0 * t_bc_right / 3.0;
-        } else {
-            tip1j = T[idx_r + 1];
-            tim1j = T[idx_r - 1];
-        }
-
-        if (col == 0) {
-            tijp1 = T[idx_r + nx];
-            double t_bc_bot = 300.0 + (x*x);
-            radd += kc * 8.0 * t_bc_bot / 3.0;
-        } else if (col == (ny - 1)) {
-            tijm1 = T[idx_r - nx];
-            double t_bc_top = 300.0 + 1.0 + (x*x);
-            radd += kc * 8.0 * t_bc_top / 3.0;
-        } else {
-            tijm1 = T[idx_r - nx];
-            tijp1 = T[idx_r + nx];
-        }
-
-        // Write to residual
-        R[idx_r] = -kc * ( jijm1 * tijm1 + jijp1 * tijp1 + jim1j * tim1j + jip1j * tip1j + jij * T[idx_r] - (2.0 + 2.0 * y / 9.0) * dx * dy) - radd;
-    }
-}
-
     LaplaceHeat::LaplaceHeat(int nx_inp, int ny_inp, double kc_inp, std::string solver_type) {
 
         nx = nx_inp;
@@ -204,7 +150,7 @@ __global__ void compute_r(double *T, double * J, double *R, int nx, int ny, doub
         dx = 1.0 / double(nx);
         dy = 3.0 / double(ny);
         
-        grid_size = dim3(nx, ny);
+        grid_size = dim3(std::ceil(ny/32), std::ceil(nx/32));
         block_size = dim3(32, 32);
 
         grid_size_1d = dim3( ceil (nx * ny / 1024.0) );

@@ -6,13 +6,13 @@ namespace LinearSolverNS {
 // Kernel to compute matrix vector product of the linear system of equations J * v . 
 __global__ void compute_matvec(double * v, double * J, double * result, int nx, int ny) {
 
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    int col = blockIdx.y * blockDim.y + threadIdx.y;
 
-    int idx_r = (j * nx) + i;
+    int idx_r = (row * nx) + col;
     int idx_j = idx_r * 5;
 
-    if ( (i < nx) && (j < ny)) {
+    if ((col < nx) && (row < ny)) {
 
         double jij = J[idx_j];
         double jim1j = J[idx_j + 1];
@@ -25,18 +25,18 @@ __global__ void compute_matvec(double * v, double * J, double * result, int nx, 
         double vijp1 = 0.0;
         double vijm1 = 0.0;
 
-        if ( i == 0) {
+        if (col == 0) {
             vip1j = v[idx_r + 1];
-        } else if ( i == (nx - 1)) {
+        } else if (col == (nx - 1)) {
             vim1j = v[idx_r - 1];
         } else {
             vip1j = v[idx_r + 1];
             vim1j = v[idx_r - 1];
         }
 
-        if ( j == 0) {
+        if (row == 0) {
             vijp1 = v[idx_r + nx];
-        } else if ( j == (ny - 1)) {
+        } else if (row == (ny - 1)) {
             vijm1 = v[idx_r - nx];
         } else {
             vijm1 = v[idx_r - nx];
@@ -50,15 +50,13 @@ __global__ void compute_matvec(double * v, double * J, double * result, int nx, 
 // Kernel to compute residual of linear system of equations R - J * deltaT
 __global__ void compute_linresid(double * deltaT, double * J, double * R, double * lin_resid, int nx, int ny) {
 
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    int col = blockIdx.y * blockDim.y + threadIdx.y;
 
-
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
-
-    int idx_r = (j * nx) + i;
+    int idx_r = (row * nx) + col;
     int idx_j = idx_r * 5;
 
-    if ( (i < nx) && (j < ny)) {
+    if ((col < nx) && (row < ny)) {
 
         double jij = J[idx_j];
         double jim1j = J[idx_j + 1];
@@ -71,18 +69,18 @@ __global__ void compute_linresid(double * deltaT, double * J, double * R, double
         double deltaTijp1 = 0.0;
         double deltaTijm1 = 0.0;
 
-        if ( i == 0) {
+        if (col == 0) {
             deltaTip1j = deltaT[idx_r + 1];
-        } else if ( i == (nx - 1)) {
+        } else if (col == (nx - 1)) {
             deltaTim1j = deltaT[idx_r - 1];
         } else {
             deltaTip1j = deltaT[idx_r + 1];
             deltaTim1j = deltaT[idx_r - 1];
         }
 
-        if ( j == 0) {
+        if (row == 0) {
             deltaTijp1 = deltaT[idx_r + nx];
-        } else if ( j == (ny - 1)) {
+        } else if (row == (ny - 1)) {
             deltaTijm1 = deltaT[idx_r - nx];
         } else {
             deltaTijm1 = deltaT[idx_r - nx];
@@ -97,7 +95,7 @@ __global__ void compute_linresid(double * deltaT, double * J, double * R, double
         double * Jinp, double *Tinp, double *deltaTinp, double *Rinp):
     nx(nxinp), ny(nyinp), J(Jinp), T(Tinp), deltaT(deltaTinp), R(Rinp) {
 
-        grid_size = dim3(std::ceil(nx/TILE_SIZE), std::ceil(ny/TILE_SIZE));
+        grid_size = dim3(std::ceil(ny/TILE_SIZE), std::ceil(nx/TILE_SIZE));
         grid_size_1d = dim3( std::ceil (nx * ny / 1024.0) );
         block_size = dim3(TILE_SIZE, TILE_SIZE, 1);
 

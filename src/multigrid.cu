@@ -34,8 +34,8 @@ __global__ void initialize_const(double *T, double val, int ntot) {
 // Expected to run on a grid and block that represents the coarse mesh
 __global__ void restrict_resid(double * rc, double * rf, int nxc, int nyc, int nxf, int nyf) {
 
-    int ic = blockIdx.x * blockDim.x + threadIdx.x;
-    int jc = blockIdx.y * blockDim.y + threadIdx.y;
+    int ic = blockIdx.y * blockDim.y + threadIdx.y;
+    int jc = blockIdx.x * blockDim.x + threadIdx.x;
 
     // Each cell in the coarse mesh (ic, jc) is a sum of the 4 cells corresponding to (2 * ic, 2 * jc), (2 * ic + 1, 2 * jc), (2 * ic, 2 * jc + 1), (2 * ic + 1, 2 * jc + 1)
     int idx_rc = (jc * nxc) + ic;
@@ -53,8 +53,8 @@ __global__ void restrict_resid(double * rc, double * rf, int nxc, int nyc, int n
 // Expected to run on a grid and block that represents the coarse mesh
 __global__ void prolongate_error(double * deltaTc, double * deltaTf, int nxc, int nyc, int nxf, int nyf) {
 
-    int ic = blockIdx.x * blockDim.x + threadIdx.x;
-    int jc = blockIdx.y * blockDim.y + threadIdx.y;
+    int jc = blockIdx.x * blockDim.x + threadIdx.x;
+    int ic = blockIdx.y * blockDim.y + threadIdx.y;
 
     // Each cell in the coarse mesh (ic, jc) is a sum of the 4 cells corresponding to (2 * ic, 2 * jc), (2 * ic + 1, 2 * jc), (2 * ic, 2 * jc + 1), (2 * ic + 1, 2 * jc + 1)
     int idx_rc = (jc * nxc) + ic;
@@ -80,8 +80,8 @@ __global__ void prolongate_error(double * deltaTc, double * deltaTf, int nxc, in
 // Expected to run on a grid and block that represents the coarse mesh
 __global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, int nyf)  {
 
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
+    int i = blockIdx.y * blockDim.y + threadIdx.y;
 
     // Each cell in the coarse mesh (ic, jc) is a sum of the 4 cells corresponding to (2 * ic, 2 * jc), (2 * ic + 1, 2 * jc), (2 * ic, 2 * jc + 1), (2 * ic + 1, 2 * jc + 1)
     int idx_jc = ((j * nxc) + i) * 5;
