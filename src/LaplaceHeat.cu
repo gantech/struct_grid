@@ -5,31 +5,21 @@
 #include <thrust/transform_reduce.h>
 #include <thrust/functional.h>
 #include <thrust/device_vector.h>
+#include <thrust/fill.h>
 
 namespace LaplaceHeatNS {
 
-    // Functor to square the elements
-    struct square {
-        __device__ double operator()(double a) {
-            return a * a;
-        }
-    };
-
-// Kernel function for initialization - No tiling or shared memory
-__global__ void initialize_const(double *T, double val, int nx, int ny) {
-
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (idx < (nx * ny))
-        T[idx] = val ;
-
-}
+// Functor to square the elements
+struct square {
+    __device__ double operator()(double a) {
+        return a * a;
+    }
+};
 
 // Kernel function for reference temperature solution
 __device__ double ref_temp(double x, double y) {
     return 300.0 + x*x + (y*y*y)/ 27.0;
 }
-
 
 // Kernel function for initialization - No tiling or shared memory
 __global__ void initialize_ref(double *T, int nx, int ny, double dx, double dy) {
@@ -40,9 +30,45 @@ __global__ void initialize_ref(double *T, int nx, int ny, double dx, double dy) 
     if ((col < nx) && (row < ny)) {
         double y = (0.5 + row) * dy;
         double x = (0.5 + col) * dx;
-        T[(row * nx) + col] = ref_temp(x, y);
+        T[(row * (nx+1)) + col + 1] = ref_temp(x, y);
     }
 
+}
+
+// Kernel function for bottom boundary condition - No tiling or shared memory
+__global__ void bottom_bc(double *T, int nx, int ny, double dx, double dy) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( idx < nx ) {
+        double x = (0.5 + idx) * dx;
+        T[idx + 1] = ref_temp(x, 0.0);
+    }
+}
+
+// Kernel function for upper boundary condition - No tiling or shared memory
+__global__ void upper_bc(double *T, int nx, int ny, double dx, double dy) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( idx < nx ) {
+        double x = (0.5 + idx) * dx;
+        T[(ny * (nx+1)) + idx + 1] = ref_temp(x, 3.0);
+    }
+}
+
+// Kernel function for left boundary condition - No tiling or shared memory
+__global__ void left_bc(double *T, int nx, int ny, double dx, double dy) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( idx < ny ) {
+        double y = (0.5 + idx) * dy;
+        T[( (idx+1) * (nx+1)) + 0] = ref_temp(0.0, y);
+    }
+}
+
+// Kernel function for right boundary condition - No tiling or shared memory
+__global__ void right_bc(double *T, int nx, int ny, double dx, double dy) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( idx < ny ) {
+        double y = (0.5 + idx) * dy;
+        T[( (idx+1) * (nx+1)) + nx] = ref_temp(1.0, y);
+    }
 }
 
 // Kernel function for update - No tiling or shared memory
@@ -50,8 +76,10 @@ __global__ void update(double *T, double *deltaT, int nx, int ny) {
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (idx < (nx * ny)) {
-        T[idx] += deltaT[idx];
+    if ( idx < (nx * ny) ) {
+        int row = idx / nx;
+        int col = idx % nx;
+        T[ row * (nx+1) + col + 1] += deltaT[idx];
         // printf("idx = %d, deltaT = %d, %d \n", idx, std::isnan(deltaT[idx]), (std::abs(deltaT[idx]) < 10.0));
     }
 
@@ -67,8 +95,8 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
 
         double y = (0.5 + row) * dy;
         double x = (0.5 + col) * dx;
-        int idx_r = (row * nx) + col;
-        int idx_j = idx_r * 5;
+        int idx_r = (row * (nx+1)) + col + 1;
+        int idx_j = (row * nx + col) * 5;
 
         double jij = -4.0;
         double jip1j = 1.0;
@@ -87,13 +115,13 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
             jip1j += 0.3333333333333333 ;
             jim1j -= 1.0;
             tip1j = T[idx_r + 1];
-            radd += kc * 8.0 * ref_temp(0.0, y) / 3.0 ;
+            radd += kc * 8.0 * T[idx_r - 1] / 3.0 ;
         } else if (col == (nx - 1)) {
             jij -= 2.0;
             jim1j += 0.3333333333333333;
             jip1j -= 1.0;
             tim1j = T[idx_r - 1];
-            radd += kc * 8.0 * ref_temp(1.0, y) / 3.0;
+            radd += kc * 8.0 * T[idx_r + 1] / 3.0;
         } else {
             tip1j = T[idx_r + 1];
             tim1j = T[idx_r - 1];
@@ -103,17 +131,17 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
             jij -= 2.0;
             jijp1 += 0.3333333333333333;
             jijm1 -= 1.0;
-            tijp1 = T[idx_r + nx];
-            radd += kc * 8.0 * ref_temp(x, 0.0) / 3.0;
+            tijp1 = T[idx_r + (nx + 1)];
+            radd += kc * 8.0 * T[idx_r - (nx + 1)] / 3.0;
         } else if (row == (ny - 1)) {
             jij -= 2.0;
             jijm1 += 0.3333333333333333;
             jijp1 -= 1.0;
-            tijm1 = T[idx_r - nx];
-            radd += kc * 8.0 * ref_temp(x, 1.0) / 3.0;
+            tijm1 = T[idx_r - (nx + 1)];
+            radd += kc * 8.0 * T[idx_r + (nx + 1)] / 3.0;
         } else {
-            tijm1 = T[idx_r - nx];
-            tijp1 = T[idx_r + nx];
+            tijm1 = T[idx_r - (nx+1)];
+            tijp1 = T[idx_r + (nx+1)];
         }
 
         // Write to residual
@@ -140,7 +168,7 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
         nx = nx_inp;
         ny = ny_inp;
         kc = kc_inp;
-        cudaMalloc(&T, nx * ny * sizeof(double));
+        cudaMalloc(&T, (nx+1) * (ny+1) * sizeof(double));
         cudaMalloc(&deltaT, nx * ny * sizeof(double));
         cudaMalloc(&J, nx * ny * 5 * sizeof(double));
         cudaMalloc(&nlr, nx * ny * sizeof(double));
@@ -180,14 +208,36 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
         cudaFree(nlr);
     }
 
-
+    // Replace your custom initialize_const function
     __host__ void LaplaceHeat::initialize_const(double * arr, double val) {
-        LaplaceHeatNS::initialize_const<<<grid_size_1d, block_size_1d>>>(arr, val, nx, ny);
-        cudaDeviceSynchronize();
+        thrust::device_ptr<double> d_ptr(arr);
+        
+        // For T array with (nx+1)*(ny+1) elements
+        if (arr == T) {
+            thrust::fill(d_ptr, d_ptr + (nx+1)*(ny+1), val);
+        }
+        // For deltaT array with nx*ny elements
+        else {
+            thrust::fill(d_ptr, d_ptr + nx*ny, val);
+        }
     }
 
     __host__ void LaplaceHeat::initialize_ref() {
-        LaplaceHeatNS::initialize_ref<<<grid_size_1d, block_size_1d>>>(T, nx, ny, dx, dy);
+        LaplaceHeatNS::initialize_ref<<<grid_size, block_size>>>(T, nx, ny, dx, dy);
+        cudaDeviceSynchronize();
+    }
+
+    __host__ void LaplaceHeat::apply_bc() {
+        cudaStream_t streams[4];
+        for (int i = 0; i < 4; ++i) cudaStreamCreate(&streams[i]);
+
+        bottom_bc<<<dim3(ceil(nx/1024.0)), dim3(1024), 0, streams[0]>>>(T, nx, ny);
+        upper_bc<<<dim3(ceil(nx/1024.0)), dim3(1024), 0, streams[1]>>>(T, nx, ny);
+        left_bc<<<dim3(ceil(ny/1024.0)), dim3(1024), 0, streams[2]>>>(T, nx, ny);
+        right_bc<<<dim3(ceil(ny/1024.0)), dim3(1024), 0, streams[3]>>>(T, nx, ny);
+
+        for (int i = 0; i < 4; ++i) cudaStreamSynchronize(streams[i]);
+        for (int i = 0; i < 4; ++i) cudaStreamDestroy(streams[i]);
         cudaDeviceSynchronize();
     }
 
@@ -216,6 +266,7 @@ int main() {
     std::ofstream resid_file_jacobi("jacobi_resid.txt");
     resid_file_jacobi << "Iter, Residual" << std::endl;
     LaplaceHeatNS::LaplaceHeat * ljacobi = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "Jacobi");
+    ljacobi->apply_bc();
     ljacobi->initialize_const(ljacobi->T, 300.0);
     for (int i = 0; i < 80; i++) {
         ljacobi->initialize_const(ljacobi->deltaT, 0.0);
@@ -230,6 +281,7 @@ int main() {
     std::ofstream resid_file_adi("adi_resid.txt");
     resid_file_adi << "Iter, Residual" << std::endl;
     LaplaceHeatNS::LaplaceHeat * ladi = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "ADI");
+    ladi->apply_bc();
     ladi->initialize_const(ladi->T, 300.0);
     for (int i = 0; i < 80; i++) {
         ladi->initialize_const(ladi->deltaT, 0.0);
@@ -244,6 +296,7 @@ int main() {
     std::ofstream resid_file_mg("mg_resid.txt");
     resid_file_mg << "Iter, Residual" << std::endl;
     LaplaceHeatNS::LaplaceHeat * lmg = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "MG");
+    lmg->apply_bc();
     lmg->initialize_const(lmg->T, 300.0);
     for (int i = 0; i < 80; i++) {
         lmg->initialize_const(lmg->deltaT, 0.0);
@@ -258,6 +311,7 @@ int main() {
     std::ofstream resid_file_cg("cg_resid.txt");
     resid_file_cg << "Iter, Residual" << std::endl;
     LaplaceHeatNS::LaplaceHeat * lcg = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "CG");
+    lcg->apply_bc();
     lcg->initialize_const(lcg->T, 300.0);
     for (int i = 0; i < 80; i++) {
         lcg->initialize_const(lcg->deltaT, 0.0);
