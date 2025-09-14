@@ -87,7 +87,13 @@ __global__ void compute_linresid(double * deltaT, double * J, double * R, double
             deltaTijp1 = deltaT[idx_r + nx];
         }
 
-        lin_resid[idx_r] = R[idx_r] - (jim1j * deltaTim1j + jip1j * deltaTip1j + jijm1 * deltaTijm1 + jijp1 * deltaTijp1 + jij * deltaT[idx_r]);
+        double tmp = R[idx_r] - (jim1j * deltaTim1j + jip1j * deltaTip1j + jijm1 * deltaTijm1 + jijp1 * deltaTijp1 + jij * deltaT[idx_r]);
+        
+        if ( std::isnan(tmp) ) {
+            printf("Row, Col is %d, %d, %d, %d- linResid =  %e, J - (j-1) %e, (j+1) %e, (i-1) %e, (i+1) %e, (ij) %e, deltaT - (j-1) %e, (j+1) %e, (i-1) %e, (i+1) %e, (ij) %e \n", row, col, blockIdx.x, blockIdx.y, tmp, jijm1, jijp1, jim1j, jip1j, jij, deltaTijm1, deltaTijp1, deltaTim1j, deltaTip1j, deltaT[idx_r]);
+        }
+        
+        lin_resid[idx_r] = tmp;
     }
 }
 

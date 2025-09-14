@@ -160,7 +160,7 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
         } else if (solver_type == "ADI" ) {
             solver = new ADINS::ADI(nx, ny, J, T, deltaT, nlr);
         } else if (solver_type == "MG" ) {
-            solver = new MultiGridNS::MultiGrid(nx, ny, J, T, deltaT, nlr, 3, "Jacobi");
+            solver = new MultiGridNS::MultiGrid(nx, ny, J, T, deltaT, nlr, 4, "Jacobi");
         } else if (solver_type == "CG" ) {
             solver = new CGNS::CG(nx, ny, J, T, deltaT, nlr);
         } else {
@@ -198,12 +198,6 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
 
     __host__ double LaplaceHeat::compute_r_j() {
         LaplaceHeatNS::compute_r_j<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy, kc);
-        cudaDeviceSynchronize();
-        return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));
-    }
-
-    __host__ double LaplaceHeat::compute_r() {
-        LaplaceHeatNS::compute_r<<<grid_size, block_size>>>(T, J, nlr, nx, ny, dx, dy, kc);
         cudaDeviceSynchronize();
         return std::sqrt(thrust::transform_reduce(t_nlr, t_nlr + nx * ny, square(), 0.0, thrust::plus<double>()));
     }
@@ -275,7 +269,8 @@ int main() {
     resid_file_cg.close();
     delete lcg;
 
-
+    delete [] resid;
+    
     return 0;
 
 }

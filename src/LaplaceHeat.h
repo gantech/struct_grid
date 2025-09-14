@@ -46,8 +46,6 @@ public:
 
     __host__ double compute_r_j();
 
-    __host__ double compute_r();
-
     __host__ void solve(int nsteps);
 
     int nx;

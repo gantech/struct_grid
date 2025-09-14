@@ -1,4 +1,5 @@
 #include "Jacobi.h"
+#include <iostream>
 
 namespace JacobiNS {
 
@@ -24,26 +25,32 @@ __global__ void jacobi_kernel(double *deltaT, double * deltaT1, double *J, doubl
         double tijp1 = 0.0;
         double tijm1 = 0.0;
 
-        if (i == 0) {
+        if (col == 0) {
             tip1j = deltaT[idx_r + 1];
-        } else if (i == (nx - 1)) {
+        } else if (col == (nx - 1)) {
             tim1j = deltaT[idx_r - 1];
         } else {
             tip1j = deltaT[idx_r + 1];
             tim1j = deltaT[idx_r - 1];
         }
 
-        if (j == 0) {
+        if (row == 0) {
             tijp1 = deltaT[idx_r + nx];
-        } else if (j == (ny - 1)) {
+        } else if (row == (ny - 1)) {
             tijm1 = deltaT[idx_r - nx];
         } else {
             tijm1 = deltaT[idx_r - nx];
             tijp1 = deltaT[idx_r + nx];
         }
 
-        deltaT1[idx_r] = (R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
+        double tmp = (R[idx_r] - jim1j * tim1j - jip1j * tip1j - jijm1 * tijm1 - jijp1 * tijp1) / jij;
+
+        deltaT1[idx_r] = tmp;
         
+        if (std::isnan(tmp)) {
+           printf("Row, Col is %d, %d, %d, %d- deltaT =  %f, J - (j-1) %f, (j+1) %f, (i-1) %f, (i+1) %f, (ij) %f, T - (j-1) %f, (j+1) %f, (i-1) %f, (i+1) %f, (ij) %f \n", row, col, blockIdx.x, blockIdx.y, tmp, jijm1, jijp1, jim1j, jip1j, jij, tijm1, tijp1, tim1j, tip1j, deltaT[idx_r]);
+        }
+
     } 
 
 }
