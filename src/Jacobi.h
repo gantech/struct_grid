@@ -12,7 +12,7 @@ namespace JacobiNS {
         public:
 
             // Constructor
-            Jacobi(int nx, int ny, double * J, double *T, double *deltaT, double *R);
+            Jacobi(int nx, int ny, double * J, double *deltaT, double *R);
 
             // Destructor
             ~Jacobi();

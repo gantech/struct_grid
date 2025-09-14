@@ -20,9 +20,11 @@ public:
     // Destructor
     ~LaplaceHeat();
 
-    __host__ void initialize_const(double * arr, double val);
+    __host__ void initialize_const(double * arr, double val, int ntot);
 
     __host__ void initialize_ref();
+
+    __host__ void apply_bc();
 
     __host__ void update();
 

@@ -30,7 +30,7 @@ __global__ void initialize_ref(double *T, int nx, int ny, double dx, double dy) 
     if ((col < nx) && (row < ny)) {
         double y = (0.5 + row) * dy;
         double x = (0.5 + col) * dx;
-        T[(row * (nx+1)) + col + 1] = ref_temp(x, y);
+        T[(row * (nx+2)) + col + 1] = ref_temp(x, y);
     }
 
 }
@@ -49,7 +49,7 @@ __global__ void upper_bc(double *T, int nx, int ny, double dx, double dy) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if ( idx < nx ) {
         double x = (0.5 + idx) * dx;
-        T[(ny * (nx+1)) + idx + 1] = ref_temp(x, 3.0);
+        T[(ny * (nx+2)) + idx + 1] = ref_temp(x, 3.0);
     }
 }
 
@@ -58,7 +58,7 @@ __global__ void left_bc(double *T, int nx, int ny, double dx, double dy) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if ( idx < ny ) {
         double y = (0.5 + idx) * dy;
-        T[( (idx+1) * (nx+1)) + 0] = ref_temp(0.0, y);
+        T[( (idx+1) * (nx+2)) + 0] = ref_temp(0.0, y);
     }
 }
 
@@ -67,7 +67,7 @@ __global__ void right_bc(double *T, int nx, int ny, double dx, double dy) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if ( idx < ny ) {
         double y = (0.5 + idx) * dy;
-        T[( (idx+1) * (nx+1)) + nx] = ref_temp(1.0, y);
+        T[( (idx+1) * (nx+2)) + nx] = ref_temp(1.0, y);
     }
 }
 
@@ -79,7 +79,7 @@ __global__ void update(double *T, double *deltaT, int nx, int ny) {
     if ( idx < (nx * ny) ) {
         int row = idx / nx;
         int col = idx % nx;
-        T[ row * (nx+1) + col + 1] += deltaT[idx];
+        T[ (row+1) * (nx+2) + col + 1] += deltaT[idx];
         // printf("idx = %d, deltaT = %d, %d \n", idx, std::isnan(deltaT[idx]), (std::abs(deltaT[idx]) < 10.0));
     }
 
@@ -95,8 +95,9 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
 
         double y = (0.5 + row) * dy;
         double x = (0.5 + col) * dx;
-        int idx_r = (row * (nx+1)) + col + 1;
-        int idx_j = (row * nx + col) * 5;
+        int idx_t = ( (row+1) * (nx+2)) + col + 1;
+        int idx_r = row * nx + col;
+        int idx_j = idx_r * 5;
 
         double jij = -4.0;
         double jip1j = 1.0;
@@ -114,42 +115,42 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
             jij -= 2.0;
             jip1j += 0.3333333333333333 ;
             jim1j -= 1.0;
-            tip1j = T[idx_r + 1];
-            radd += kc * 8.0 * T[idx_r - 1] / 3.0 ;
+            tip1j = T[idx_t + 1];
+            radd += kc * 8.0 * T[idx_t - 1] / 3.0 ;
         } else if (col == (nx - 1)) {
             jij -= 2.0;
             jim1j += 0.3333333333333333;
             jip1j -= 1.0;
-            tim1j = T[idx_r - 1];
-            radd += kc * 8.0 * T[idx_r + 1] / 3.0;
+            tim1j = T[idx_t - 1];
+            radd += kc * 8.0 * T[idx_t + 1] / 3.0;
         } else {
-            tip1j = T[idx_r + 1];
-            tim1j = T[idx_r - 1];
+            tip1j = T[idx_t + 1];
+            tim1j = T[idx_t - 1];
         }
 
         if (row == 0) {
             jij -= 2.0;
             jijp1 += 0.3333333333333333;
             jijm1 -= 1.0;
-            tijp1 = T[idx_r + (nx + 1)];
-            radd += kc * 8.0 * T[idx_r - (nx + 1)] / 3.0;
+            tijp1 = T[idx_t + (nx + 2)];
+            radd += kc * 8.0 * T[idx_t - (nx + 2)] / 3.0;
         } else if (row == (ny - 1)) {
             jij -= 2.0;
             jijm1 += 0.3333333333333333;
             jijp1 -= 1.0;
-            tijm1 = T[idx_r - (nx + 1)];
-            radd += kc * 8.0 * T[idx_r + (nx + 1)] / 3.0;
+            tijm1 = T[idx_t - (nx + 2)];
+            radd += kc * 8.0 * T[idx_t + (nx + 1)] / 3.0;
         } else {
-            tijm1 = T[idx_r - (nx+1)];
-            tijp1 = T[idx_r + (nx+1)];
+            tijm1 = T[idx_t - (nx+2)];
+            tijp1 = T[idx_t + (nx+2)];
         }
 
         // Write to residual
-        double tmp = kc * ( jijm1 * tijm1 + jijp1 * tijp1 + jim1j * tim1j + jip1j * tip1j + jij * T[idx_r] - (2.0 + 2.0 * y / 9.0) * dx * dy) + radd;
+        double tmp = kc * ( jijm1 * tijm1 + jijp1 * tijp1 + jim1j * tim1j + jip1j * tip1j + jij * T[idx_t] - (2.0 + 2.0 * y / 9.0) * dx * dy) + radd;
 
         // if (std::abs(tmp/(dx * dy * kc)) > 20.0) {
         if (std::isnan(tmp)) {
-           printf("Row, Col is %d, %d - x,y = %f, %f, Residuals - %f, %f, J - (j-1) %f, (j+1) %f, (i-1) %f, (i+1) %f, (ij) %f, T - (j-1) %f, (j+1) %f, (i-1) %f, (i+1) %f, (ij) %f \n", row, col, x, y, 2.0 - 2.0 * y / 9.0, tmp, jijm1, jijp1, jim1j, jip1j, jij, tijm1, tijp1, tim1j, tip1j, T[idx_r]);
+           printf("Row, Col is %d, %d - x,y = %f, %f, Residuals - %f, %f, J - (j-1) %f, (j+1) %f, (i-1) %f, (i+1) %f, (ij) %f, T - (j-1) %f, (j+1) %f, (i-1) %f, (i+1) %f, (ij) %f \n", row, col, x, y, 2.0 - 2.0 * y / 9.0, tmp, jijm1, jijp1, jim1j, jip1j, jij, tijm1, tijp1, tim1j, tip1j, T[idx_t]);
         }
 
         R[idx_r] = -tmp;
@@ -168,7 +169,7 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
         nx = nx_inp;
         ny = ny_inp;
         kc = kc_inp;
-        cudaMalloc(&T, (nx+1) * (ny+1) * sizeof(double));
+        cudaMalloc(&T, (nx+2) * (ny+2) * sizeof(double));
         cudaMalloc(&deltaT, nx * ny * sizeof(double));
         cudaMalloc(&J, nx * ny * 5 * sizeof(double));
         cudaMalloc(&nlr, nx * ny * sizeof(double));
@@ -177,20 +178,20 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
 
         dx = 1.0 / double(nx);
         dy = 3.0 / double(ny);
-        
+
         grid_size = dim3(std::ceil(ny/32), std::ceil(nx/32));
         block_size = dim3(32, 32);
 
         grid_size_1d = dim3( ceil (nx * ny / 1024.0) );
 
         if (solver_type == "Jacobi") {
-            solver = new JacobiNS::Jacobi(nx, ny, J, T, deltaT, nlr);
+            solver = new JacobiNS::Jacobi(nx, ny, J, deltaT, nlr);
         } else if (solver_type == "ADI" ) {
-            solver = new ADINS::ADI(nx, ny, J, T, deltaT, nlr);
+            solver = new ADINS::ADI(nx, ny, J, deltaT, nlr);
         } else if (solver_type == "MG" ) {
-            solver = new MultiGridNS::MultiGrid(nx, ny, J, T, deltaT, nlr, 4, "Jacobi");
+            solver = new MultiGridNS::MultiGrid(nx, ny, J, deltaT, nlr, 4, "Jacobi");
         } else if (solver_type == "CG" ) {
-            solver = new CGNS::CG(nx, ny, J, T, deltaT, nlr);
+            solver = new CGNS::CG(nx, ny, J, deltaT, nlr);
         } else {
             std::cout << "Invalid solver type. Availabl solvers are Jacobi and ADI. " << std::endl;
             exit(1);
@@ -209,17 +210,9 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
     }
 
     // Replace your custom initialize_const function
-    __host__ void LaplaceHeat::initialize_const(double * arr, double val) {
+    __host__ void LaplaceHeat::initialize_const(double * arr, double val, int ntot) {
         thrust::device_ptr<double> d_ptr(arr);
-        
-        // For T array with (nx+1)*(ny+1) elements
-        if (arr == T) {
-            thrust::fill(d_ptr, d_ptr + (nx+1)*(ny+1), val);
-        }
-        // For deltaT array with nx*ny elements
-        else {
-            thrust::fill(d_ptr, d_ptr + nx*ny, val);
-        }
+        thrust::fill(d_ptr, d_ptr + ntot, val);
     }
 
     __host__ void LaplaceHeat::initialize_ref() {
@@ -231,10 +224,10 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
         cudaStream_t streams[4];
         for (int i = 0; i < 4; ++i) cudaStreamCreate(&streams[i]);
 
-        bottom_bc<<<dim3(ceil(nx/1024.0)), dim3(1024), 0, streams[0]>>>(T, nx, ny);
-        upper_bc<<<dim3(ceil(nx/1024.0)), dim3(1024), 0, streams[1]>>>(T, nx, ny);
-        left_bc<<<dim3(ceil(ny/1024.0)), dim3(1024), 0, streams[2]>>>(T, nx, ny);
-        right_bc<<<dim3(ceil(ny/1024.0)), dim3(1024), 0, streams[3]>>>(T, nx, ny);
+        bottom_bc<<<dim3(ceil(nx/1024.0)), dim3(1024), 0, streams[0]>>>(T, nx, ny, dx, dy);
+        upper_bc<<<dim3(ceil(nx/1024.0)), dim3(1024), 0, streams[1]>>>(T, nx, ny, dx, dy);
+        left_bc<<<dim3(ceil(ny/1024.0)), dim3(1024), 0, streams[2]>>>(T, nx, ny, dx, dy);
+        right_bc<<<dim3(ceil(ny/1024.0)), dim3(1024), 0, streams[3]>>>(T, nx, ny, dx, dy);
 
         for (int i = 0; i < 4; ++i) cudaStreamSynchronize(streams[i]);
         for (int i = 0; i < 4; ++i) cudaStreamDestroy(streams[i]);
@@ -263,13 +256,16 @@ int main() {
 
     double * resid = new double[80];
 
+    int nx = 128;
+    int ny = 384;
+
     std::ofstream resid_file_jacobi("jacobi_resid.txt");
     resid_file_jacobi << "Iter, Residual" << std::endl;
-    LaplaceHeatNS::LaplaceHeat * ljacobi = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "Jacobi");
+    LaplaceHeatNS::LaplaceHeat * ljacobi = new LaplaceHeatNS::LaplaceHeat(nx, ny, 0.01, "Jacobi");
+    ljacobi->initialize_const(ljacobi->T, 300.0, (nx+2)*(ny+2));
     ljacobi->apply_bc();
-    ljacobi->initialize_const(ljacobi->T, 300.0);
     for (int i = 0; i < 80; i++) {
-        ljacobi->initialize_const(ljacobi->deltaT, 0.0);
+        ljacobi->initialize_const(ljacobi->deltaT, 0.0, nx * ny);
         resid[i] = ljacobi->compute_r_j();
         resid_file_jacobi << i << ", " << resid[i] << std::endl;
         ljacobi->solve(100); // Loops of Jacobi
@@ -280,11 +276,11 @@ int main() {
 
     std::ofstream resid_file_adi("adi_resid.txt");
     resid_file_adi << "Iter, Residual" << std::endl;
-    LaplaceHeatNS::LaplaceHeat * ladi = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "ADI");
+    LaplaceHeatNS::LaplaceHeat * ladi = new LaplaceHeatNS::LaplaceHeat(nx, ny, 0.01, "ADI");
+    ladi->initialize_const(ladi->T, 300.0, (nx+2)*(ny+2));
     ladi->apply_bc();
-    ladi->initialize_const(ladi->T, 300.0);
     for (int i = 0; i < 80; i++) {
-        ladi->initialize_const(ladi->deltaT, 0.0);
+        ladi->initialize_const(ladi->deltaT, 0.0, nx * ny);
         resid[i] = ladi->compute_r_j();
         resid_file_adi << "Iter = " << i << ", " << resid[i] << std::endl;
         ladi->solve(100); // Loops of ADI
@@ -295,11 +291,11 @@ int main() {
 
     std::ofstream resid_file_mg("mg_resid.txt");
     resid_file_mg << "Iter, Residual" << std::endl;
-    LaplaceHeatNS::LaplaceHeat * lmg = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "MG");
+    LaplaceHeatNS::LaplaceHeat * lmg = new LaplaceHeatNS::LaplaceHeat(nx, ny, 0.01, "MG");
+    lmg->initialize_const(lmg->T, 300.0, (nx+2)*(ny+2));
     lmg->apply_bc();
-    lmg->initialize_const(lmg->T, 300.0);
     for (int i = 0; i < 80; i++) {
-        lmg->initialize_const(lmg->deltaT, 0.0);
+        lmg->initialize_const(lmg->deltaT, 0.0, nx * ny);
         resid[i] = lmg->compute_r_j();
         resid_file_mg << "Iter = " << i << ", " << resid[i] << std::endl;
         lmg->solve(100); // Loops of MG
@@ -310,11 +306,11 @@ int main() {
 
     std::ofstream resid_file_cg("cg_resid.txt");
     resid_file_cg << "Iter, Residual" << std::endl;
-    LaplaceHeatNS::LaplaceHeat * lcg = new LaplaceHeatNS::LaplaceHeat(128, 384, 0.01, "CG");
+    LaplaceHeatNS::LaplaceHeat * lcg = new LaplaceHeatNS::LaplaceHeat(nx, ny, 0.01, "CG");
+    lcg->initialize_const(lcg->T, 300.0, (nx+2)*(ny+2));
     lcg->apply_bc();
-    lcg->initialize_const(lcg->T, 300.0);
     for (int i = 0; i < 80; i++) {
-        lcg->initialize_const(lcg->deltaT, 0.0);
+        lcg->initialize_const(lcg->deltaT, 0.0, nx * ny);
         resid[i] = lcg->compute_r_j();
         resid_file_cg << "Iter = " << i << ", " << resid[i] << std::endl;
         lcg->solve(100); // Loops of CG
@@ -324,7 +320,7 @@ int main() {
     delete lcg;
 
     delete [] resid;
-    
+
     return 0;
 
 }
