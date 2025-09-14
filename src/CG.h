@@ -7,14 +7,12 @@
 
 namespace CGNS {
 
-    __global__ void _kernel(double * deltaT, double * deltaT1, double * J, double * R, int nx, int ny);
-
     class CG: public LinearSolverNS::LinearSolver {
 
         public:
 
             // Constructor
-            CG(int nx, int ny, double * J, double *T, double *deltaT, double *R);
+            CG(int nx, int ny, double * J, double *deltaT, double *R);
 
             // Destructor
             ~CG();

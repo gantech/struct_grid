@@ -107,8 +107,8 @@ __global__ void restrict_j(double * jc, double * jf, int nxc, int nyc, int nxf, 
 
 }
 
-MultiGrid::MultiGrid(int nx, int ny, double * J, double *T, double *deltaT, double *R, int nlevels_inp, std::string bottom_solver):
-LinearSolver::LinearSolver(nx, ny, J, T, deltaT, R),
+MultiGrid::MultiGrid(int nx, int ny, double * J, double *deltaT, double *R, int nlevels_inp, std::string bottom_solver):
+LinearSolver::LinearSolver(nx, ny, J, deltaT, R),
 nlevels(nlevels_inp)
 {
 
@@ -144,12 +144,12 @@ nlevels(nlevels_inp)
     }
 
     for (int ilevel = 0; ilevel < (nlevels-1); ilevel++)
-        smoothers.push_back(new JacobiNS::Jacobi(nxl[ilevel], nyl[ilevel], Jmg[ilevel], Rlinmg[ilevel], deltaTmg[ilevel], Rmg[ilevel]));
+        smoothers.push_back(new JacobiNS::Jacobi(nxl[ilevel], nyl[ilevel], Jmg[ilevel], deltaTmg[ilevel], Rmg[ilevel]));
     
     // if (bottom_solver == "Conjugate Gradient")
     //     smoothers.push_back(new CGNS::CG(nxl[nlevels-1], nyl[nlevels-1], Jmg[nlevels-1], Rlinmg[nlevels-1], deltaTmg[nlevels-1], Rmg[nlevels-1]));
     // else
-    smoothers.push_back(new JacobiNS::Jacobi(nxl[nlevels-1], nyl[nlevels-1], Jmg[nlevels-1], Rlinmg[nlevels-1], deltaTmg[nlevels-1], Rmg[nlevels-1]));
+    smoothers.push_back(new JacobiNS::Jacobi(nxl[nlevels-1], nyl[nlevels-1], Jmg[nlevels-1], deltaTmg[nlevels-1], Rmg[nlevels-1]));
 
 }
 

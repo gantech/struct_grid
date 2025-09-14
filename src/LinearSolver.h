@@ -10,7 +10,7 @@ namespace LinearSolverNS {
         public:
             // Constructor
             LinearSolver(int nxinp, int nyinp,
-                double * Jinp, double *Tinp, double *deltaTinp, double *Rinp);
+                double * Jinp, double *deltaTinp, double *Rinp);
 
             // Destructor
             ~LinearSolver() {}
@@ -29,7 +29,6 @@ namespace LinearSolverNS {
             int nx;
             int ny;
             double * J;
-            double * T;
             double * deltaT;
             double * R;
 

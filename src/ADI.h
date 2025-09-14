@@ -14,7 +14,7 @@ namespace ADINS {
         public:
 
             // Constructor
-            ADI(int nx, int ny, double * J, double *T, double *deltaT, double *R);
+            ADI(int nx, int ny, double * J, double *deltaT, double *R);
 
             // Destructor
             ~ADI() {}
