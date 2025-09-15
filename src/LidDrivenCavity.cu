@@ -15,9 +15,9 @@ __global__ void initialize_const(double *T, double val, int nx, int ny) {
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (idx < (nx * ny)) 
+    if (idx < (nx * ny))
         T[idx] = val ;
-    
+
 }
 
 // // Kernel function for initialization - No tiling or shared memory
@@ -34,7 +34,7 @@ __global__ void bottom_bc(double *u, double * v, double * p, int nx, int ny, dou
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if ( idx < nx ) {
         double x = (0.5 + idx) * dx;
-        u[idx + 1] = 0.0; // Wall velocity 
+        u[idx + 1] = 0.0; // Wall velocity
         v[idx + 1] = 0.0; // No penetration
         p[idx + 1] = p[(nx+2) + idx + 1]; // Reference pressure (could be zero or Neumann)
     }
@@ -78,7 +78,7 @@ __global__ void update(double *T, double *deltaT, int nx, int ny) {
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (idx < (nx * ny)) 
+    if (idx < (nx * ny))
         T[idx] += deltaT[idx];
 
 }
@@ -96,13 +96,13 @@ __global__ void compute_gradp_kernel(double * p, double * gradp, int nx, int ny,
 }
 
 __device__ double face_flux_mom(double ul, double ur,
-                                double pl, double pr, 
+                                double pl, double pr,
                                 double gpl, double gpr,
-                                double a_invl, double a_invr, 
+                                double a_invl, double a_invr,
                                 double deltaface, double deltaperp) {
     double df_inv = 1.0 / deltaface;
-    return 0.5 * (  (ul + ur) 
-                + 0.5 * df_inv * (a_invl * gpl + a_invr * gpr) 
+    return 0.5 * (  (ul + ur)
+                + 0.5 * df_inv * (a_invl * gpl + a_invr * gpr)
                 - (a_invl + a_invr) * (pr - pl) ) * deltaperp;
 }
 
@@ -120,22 +120,22 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
                                const __grid_constant__ CUtensorMap tensor_map_u_nlr,
                                const __grid_constant__ CUtensorMap tensor_map_v_nlr,
                                double * u, double * v, double * p, double * a_inv,
-                               double * u_nlr, double * v_nlr, double * Jmom, 
-                               int nx, int ny, double dx, double dy, 
+                               double * u_nlr, double * v_nlr, double * Jmom,
+                               int nx, int ny, double dx, double dy,
                                double nu, double dt) {
 
     const int cRow = blockIdx.y * BM;
-    const int cCol = blockIdx.x * BN; 
+    const int cCol = blockIdx.x * BN;
 
-    extern __shared__ SharedMemory shared_mem[];    
+    extern __shared__ SharedMemory shared_mem[];
     double * us = reinterpret_cast<double*>(shared_mem);
     double * vs = us + ((BM+2) * (BN+2));
     double * ps = vs + ((BM+2) * (BN+2));
     double * a_invs = ps + ((BM+2) * (BN+2));
-    // Continue to keep memory allocation for u_nlr, v_nlr and 
-    // Jmom as (BM+2)*(BN+2). However, I will only compute 
+    // Continue to keep memory allocation for u_nlr, v_nlr and
+    // Jmom as (BM+2)*(BN+2). However, I will only compute
     // these for BM * BN cells.
-    double * u_nlrs = a_invs + ((BM+2) * (BN+2)); 
+    double * u_nlrs = a_invs + ((BM+2) * (BN+2));
     double * v_nlrs = u_nlrs + ((BM+2) * (BN+2));
     double * Jmoms = v_nlrs + ((BM+2) * (BN+2));
 
@@ -177,7 +177,7 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
     2. Compute Jmom, u_nlr and v_nlr
     3. Transfer data from shared memory to global memory for Jmom, u_nlr and v_nlr
     */
-    
+
     int threadRow = threadIdx.x / BN;
     int threadCol = threadIdx.x % BN;
     int sidx = (threadRow + 1) * (BN + 2) + threadCol + 1;
@@ -187,8 +187,8 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
     double phi_e = face_flux_mom(us[sidx],     us[sidx + 1], ps[sidx],     ps[sidx + 1], ps[sidx - 1], ps[sidx + 2], a_invs[sidx],     a_invs[sidx + 1], dx, dy);
     double phi_s = face_flux_mom(vs[sidx - (BN + 2)], vs[sidx],            ps[sidx - (BN + 2)], ps[sidx],            ps[sidx - 2*(BN + 2)], ps[sidx + (BN + 2)],   a_invs[sidx - (BN + 2)], a_invs[sidx],            dy, dx);
     double phi_n = face_flux_mom(vs[sidx],            vs[sidx + (BN + 2)], ps[sidx],            ps[sidx + (BN + 2)], ps[sidx - (BN + 2)],   ps[sidx + 2*(BN + 2)], a_invs[sidx],            a_invs[sidx + (BN + 2)], dy, dx);
-    
-    u_nlrs[sidx] += dx * dy * dt_inv + 0.5 * (ps[sidx + 1] - ps[sidx - 1]) 
+
+    u_nlrs[sidx] += dx * dy * dt_inv + 0.5 * (ps[sidx + 1] - ps[sidx - 1])
                     - (phi_w > 0.0 ? us[sidx-1] : us[sidx]) * phi_w
                     + (phi_e > 0.0 ? us[sidx]   : us[sidx+1]) * phi_e
                     - (phi_s > 0.0 ? us[sidx - (BN + 2)] : us[sidx]           ) * phi_s
@@ -227,8 +227,8 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
 
       for (int i = 0; i < 4; i++)
         (&bar_a[i])->~barrier();
-    }                    
-  
+    }
+
 }
 
 template <const int BM, const int BN>
@@ -238,21 +238,21 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
                                const __grid_constant__ CUtensorMap tensor_map_a_inv,
                                const __grid_constant__ CUtensorMap tensor_map_cont_nlr,
                                double * u, double * v, double * p, double * a_inv,
-                               double * cont_nlr, double * Jcont, 
+                               double * cont_nlr, double * Jcont,
                                int nx, int ny, double dx, double dy) {
 
     const int cRow = blockIdx.y * BM;
-    const int cCol = blockIdx.x * BN; 
-    
-    extern __shared__ SharedMemory shared_mem[];    
+    const int cCol = blockIdx.x * BN;
+
+    extern __shared__ SharedMemory shared_mem[];
     double * us = reinterpret_cast<double*>(shared_mem);
     double * vs = us + ((BM+2) * (BN+2));
     double * ps = vs + ((BM+2) * (BN+2));
     double * a_invs = ps + ((BM+2) * (BN+2));
-    // Continue to keep memory allocation for cont_nlr and 
-    // Jcont as (BM+2)*(BN+2). However, I will only compute 
+    // Continue to keep memory allocation for cont_nlr and
+    // Jcont as (BM+2)*(BN+2). However, I will only compute
     // these for BM * BN cells.
-    double * cont_nlrs = a_invs + ((BM+2) * (BN+2)); 
+    double * cont_nlrs = a_invs + ((BM+2) * (BN+2));
     double * Jconts = cont_nlrs + ((BM+2) * (BN+2));
 
     // Initialize shared memory barrier with the number of threads participating in the barrier.
@@ -292,7 +292,7 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
     2. Compute Jcont, cont_nlr
     3. Transfer data from shared memory to global memory for Jcont, cont_nlr
     */
-    
+
     int threadRow = threadIdx.x / BN;
     int threadCol = threadIdx.x % BN;
     int sidx = (threadRow + 1) * (BN + 2) + threadCol + 1;
@@ -302,7 +302,7 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
     double phi_e = face_flux_mom(us[sidx],     us[sidx + 1], ps[sidx],     ps[sidx + 1], ps[sidx - 1], ps[sidx + 2], a_invs[sidx],     a_invs[sidx + 1], dx, dy);
     double phi_s = face_flux_mom(vs[sidx - (BN + 2)], vs[sidx],            ps[sidx - (BN + 2)], ps[sidx],            ps[sidx - 2*(BN + 2)], ps[sidx + (BN + 2)],   a_invs[sidx - (BN + 2)], a_invs[sidx],            dy, dx);
     double phi_n = face_flux_mom(vs[sidx],            vs[sidx + (BN + 2)], ps[sidx],            ps[sidx + (BN + 2)], ps[sidx - (BN + 2)],   ps[sidx + 2*(BN + 2)], a_invs[sidx],            a_invs[sidx + (BN + 2)], dy, dx);
-    
+
     cont_nlrs[sidx] += phi_e - phi_w + phi_n - phi_s;
 
     // Wait for shared memory writes to be visible to TMA engine.
@@ -322,8 +322,8 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
 
       for (int i = 0; i < 4; i++)
         (&bar_a[i])->~barrier();
-    }                    
-  
+    }
+
 }
 
 
@@ -335,7 +335,7 @@ PFN_cuTensorMapEncodeTiled_v12000 get_cuTensorMapEncodeTiled() {
   assert(driver_status == cudaDriverEntryPointSuccess);
   return reinterpret_cast<PFN_cuTensorMapEncodeTiled_v12000>(cuTensorMapEncodeTiled_ptr);
 }
- 
+
 CUtensorMap get_tensor_map(double *A, const int M, const int N,
                            const int BM, const int BN) {
 
@@ -386,7 +386,7 @@ __host__ double LidDrivenCavity::compute_mom_r_j() {
   // Launch the kernel for computing the residuals
   const uint BM = 32;
   const uint BN = 32;
-  int shared_memory_size = (BM + 2) * (BN + 2) * sizeof(double) * 11;  
+  int shared_memory_size = (BM + 2) * (BN + 2) * sizeof(double) * 11;
   compute_rmom_j<BM,BN>
         <<<grid_size, block_size, shared_memory_size>>>(get_tensor_map(umom, nx+2, ny+2, BM+2, BN+2),
                                                         get_tensor_map(vmom, nx+2, ny+2, BM+2, BN+2),
@@ -394,7 +394,7 @@ __host__ double LidDrivenCavity::compute_mom_r_j() {
                                                         get_tensor_map(a_inv, nx+2, ny+2, BM+2, BN+2),
                                                         get_tensor_map(u_nlr, nx+2, ny+2, BM+2, BN+2),
                                                         get_tensor_map(v_nlr, nx+2, ny+2, BM+2, BN+2),
-                                                        umom, vmom, pres, a_inv, u_nlr, v_nlr, Jmom, 
+                                                        umom, vmom, pres, a_inv, u_nlr, v_nlr, Jmom,
                                                         nx, ny, dx, dy, nu, dt);
   return 1.0;
 }
@@ -427,10 +427,10 @@ __host__ void LidDrivenCavity::apply_bc() {
     cudaStream_t streams[4];
     for (int i = 0; i < 4; ++i) cudaStreamCreate(&streams[i]);
 
-    bottom_bc<<<dim3(ceil(nx/1024.0)), dim3(1024), 0, streams[0]>>>(T, nx, ny, dx, dy);
-    upper_bc<<<dim3(ceil(nx/1024.0)), dim3(1024), 0, streams[1]>>>(T, nx, ny, dx, dy);
-    left_bc<<<dim3(ceil(ny/1024.0)), dim3(1024), 0, streams[2]>>>(T, nx, ny, dx, dy);
-    right_bc<<<dim3(ceil(ny/1024.0)), dim3(1024), 0, streams[3]>>>(T, nx, ny, dx, dy);
+    bottom_bc<<<dim3(ceil(nx/1024.0)), dim3(1024), 0, streams[0]>>>(umom, vmom, pres, nx, ny, dx, dy);
+    upper_bc<<<dim3(ceil(nx/1024.0)), dim3(1024), 0, streams[1]>>>(umom, vmom, pres, nx, ny, dx, dy);
+    left_bc<<<dim3(ceil(ny/1024.0)), dim3(1024), 0, streams[2]>>>(umom, vmom, pres, nx, ny, dx, dy);
+    right_bc<<<dim3(ceil(ny/1024.0)), dim3(1024), 0, streams[3]>>>(umom, vmom, pres, nx, ny, dx, dy);
 
     for (int i = 0; i < 4; ++i) cudaStreamSynchronize(streams[i]);
     for (int i = 0; i < 4; ++i) cudaStreamDestroy(streams[i]);
@@ -445,7 +445,7 @@ LidDrivenCavity::LidDrivenCavity(int nx_inp, int ny_inp, double nu_inp) {
     dy = 3.0 / ny;
     nu = nu_inp;
     dt = 0.001;
-    
+
     grid_size = dim3(nx, ny);
     block_size = dim3(32, 32);
 
@@ -499,18 +499,18 @@ LidDrivenCavity::~LidDrivenCavity() {
     cudaFree(cont_nlr);
 
 }
-    
+
 }
 
 int main() {
 
     LidDrivenCavityNS::LidDrivenCavity * lcav = new LidDrivenCavityNS::LidDrivenCavity(1280, 3840, 0.001);
 
-    for (int i = 0; i < 1e6; i++) {
+    for (int i = 0; i < 1000; i++) {
         lcav->compute_mom_r_j();
         lcav->compute_cont_r_j();
-        lcav->apply_bc();
-        lcav->compute_gradp();
+        // lcav->apply_bc();
+        // lcav->compute_gradp();
     }
 
     delete lcav;
