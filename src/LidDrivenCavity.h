@@ -9,21 +9,6 @@
 
 namespace LidDrivenCavityNS {
 
-// Kernel function for initialization - No tiling or shared memory
-__global__ void initialize_const(double *T, double val, int nx, int ny);
-
-// Kernel function for initialization - No tiling or shared memory
-__global__ void initialize_rand(double *T, int nx, int ny);
-
-// Kernel function for update - No tiling or shared memory
-__global__ void update(double *T, double *deltaT, double alpha, int nx, int ny);
-
-// Kernel function for calculation of Jacobian and Residual - No tiling or shared memory
-__global__ void compute_mom_r_j(double *T, double *J, double *R, int nx, int ny, double dx, double dy, double kc);
-
-// Kernel function for calculation of Residual - No tiling or shared memory
-__global__ void compute_cont_r_j(double *T, double * J, double *R, int nx, int ny, double dx, double dy, double kc);
-
 class LidDrivenCavity {
 public:
 
@@ -32,6 +17,10 @@ public:
 
     // Destructor
     ~LidDrivenCavity();
+
+    __host__ void compute_gradp();
+
+    __host__ void apply_bc();
 
     __host__ void update_mom(double alpha_mom = 1.0);
 
