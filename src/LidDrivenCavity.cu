@@ -116,6 +116,8 @@ template <const int BM, const int BN>
 __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_umom,
                                const __grid_constant__ CUtensorMap tensor_map_vmom,
                                const __grid_constant__ CUtensorMap tensor_map_p,
+                               const __grid_constant__ CUtensorMap tensor_map_gpx,
+                               const __grid_constant__ CUtensorMap tensor_map_gpy,
                                const __grid_constant__ CUtensorMap tensor_map_a_inv,
                                const __grid_constant__ CUtensorMap tensor_map_u_nlr,
                                const __grid_constant__ CUtensorMap tensor_map_v_nlr,
@@ -131,7 +133,9 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
     double * us = reinterpret_cast<double*>(shared_mem);
     double * vs = us + ((BM+2) * (BN+2));
     double * ps = vs + ((BM+2) * (BN+2));
-    double * a_invs = ps + ((BM+2) * (BN+2));
+    double * gpxs = ps + ((BM+2) * (BN+2));
+    double * gpys = gpxs + ((BM+2) * (BN+2));
+    double * a_invs = gpys + ((BM+2) * (BN+2));
     // Continue to keep memory allocation for u_nlr, v_nlr and
     // Jmom as (BM+2)*(BN+2). However, I will only compute
     // these for BM * BN cells.
@@ -141,9 +145,9 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
 
     // Initialize shared memory barrier with the number of threads participating in the barrier.
     #pragma nv_diag_suppress static_var_with_dynamic_init
-    __shared__ barrier bar_a[4];
+    __shared__ barrier bar_a[6];
     if (threadIdx.x == 0) {
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 6; i++) {
           init(&bar_a[i], blockDim.x);
         }
         cde::fence_proxy_async_shared_cta();
@@ -157,15 +161,19 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
         token[1] = cuda::device::barrier_arrive_tx(bar_a[1], 1, (BM+2) * (BN+2) * sizeof(double));
         cde::cp_async_bulk_tensor_2d_global_to_shared(ps, &tensor_map_p, cCol * BN, cRow * BM, bar_a[2]);
         token[2] = cuda::device::barrier_arrive_tx(bar_a[2], 1, (BM+2) * (BN+2) * sizeof(double));
-        cde::cp_async_bulk_tensor_2d_global_to_shared(a_invs, &tensor_map_a_inv, cCol * BN, cRow * BM, bar_a[3]);
-        token[3] = cuda::device::barrier_arrive_tx(bar_a[3], 1, (BM+2) * (BN+2) * sizeof(double));
+        cde::cp_async_bulk_tensor_2d_global_to_shared(gpxs, &tensor_map_gpx, cCol * BN, cRow * BM, bar_a[3]);
+        token[2] = cuda::device::barrier_arrive_tx(bar_a[3], 1, (BM+2) * (BN+2) * sizeof(double));
+        cde::cp_async_bulk_tensor_2d_global_to_shared(gpys, &tensor_map_gpy, cCol * BN, cRow * BM, bar_a[4]);
+        token[2] = cuda::device::barrier_arrive_tx(bar_a[4], 1, (BM+2) * (BN+2) * sizeof(double));
+        cde::cp_async_bulk_tensor_2d_global_to_shared(a_invs, &tensor_map_a_inv, cCol * BN, cRow * BM, bar_a[5]);
+        token[3] = cuda::device::barrier_arrive_tx(bar_a[5], 1, (BM+2) * (BN+2) * sizeof(double));
     } else {
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 6; i++) {
             token[i] = bar_a[i].arrive();
         }
     }
 
-    for (int i=0; i < 4; i++) {
+    for (int i=0; i < 6; i++) {
       bar_a[i].wait(std::move(token[i]));
     }
 
@@ -183,10 +191,10 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
     int sidx = (threadRow + 1) * (BN + 2) + threadCol + 1;
 
     // Step 2 - Compute Jmom, u_nlr and v_nlr
-    double phi_w = face_flux_mom(us[sidx - 1], us[sidx],     ps[sidx - 1], ps[sidx],     ps[sidx - 2], ps[sidx + 1], a_invs[sidx - 1], a_invs[sidx],     dx, dy);
-    double phi_e = face_flux_mom(us[sidx],     us[sidx + 1], ps[sidx],     ps[sidx + 1], ps[sidx - 1], ps[sidx + 2], a_invs[sidx],     a_invs[sidx + 1], dx, dy);
-    double phi_s = face_flux_mom(vs[sidx - (BN + 2)], vs[sidx],            ps[sidx - (BN + 2)], ps[sidx],            ps[sidx - 2*(BN + 2)], ps[sidx + (BN + 2)],   a_invs[sidx - (BN + 2)], a_invs[sidx],            dy, dx);
-    double phi_n = face_flux_mom(vs[sidx],            vs[sidx + (BN + 2)], ps[sidx],            ps[sidx + (BN + 2)], ps[sidx - (BN + 2)],   ps[sidx + 2*(BN + 2)], a_invs[sidx],            a_invs[sidx + (BN + 2)], dy, dx);
+    double phi_w = face_flux_mom(us[sidx - 1], us[sidx],     ps[sidx - 1], ps[sidx],     gpxs[sidx - 1], gpxs[sidx], a_invs[sidx - 1], a_invs[sidx],     dx, dy);
+    double phi_e = face_flux_mom(us[sidx],     us[sidx + 1], ps[sidx],     ps[sidx + 1], gpxs[sidx], gpxs[sidx + 1], a_invs[sidx],     a_invs[sidx + 1], dx, dy);
+    double phi_s = face_flux_mom(vs[sidx - (BN + 2)], vs[sidx],            ps[sidx - (BN + 2)], ps[sidx],            gpys[sidx - (BN + 2)], gpys[sidx],   a_invs[sidx - (BN + 2)], a_invs[sidx],            dy, dx);
+    double phi_n = face_flux_mom(vs[sidx],            vs[sidx + (BN + 2)], ps[sidx],            ps[sidx + (BN + 2)], gpys[sidx],   gpys[sidx + (BN + 2)], a_invs[sidx],            a_invs[sidx + (BN + 2)], dy, dx);
 
     u_nlrs[sidx] += dx * dy * dt_inv + 0.5 * (ps[sidx + 1] - ps[sidx - 1])
                     - (phi_w > 0.0 ? us[sidx-1] : us[sidx]) * phi_w
@@ -225,7 +233,7 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
       // Wait for the group to have completed reading from shared memory.
       cde::cp_async_bulk_wait_group_read<0>();
 
-      for (int i = 0; i < 4; i++)
+      for (int i = 0; i < 6; i++)
         (&bar_a[i])->~barrier();
     }
 
@@ -235,6 +243,8 @@ template <const int BM, const int BN>
 __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_umom,
                                const __grid_constant__ CUtensorMap tensor_map_vmom,
                                const __grid_constant__ CUtensorMap tensor_map_p,
+                               const __grid_constant__ CUtensorMap tensor_map_gpx,
+                               const __grid_constant__ CUtensorMap tensor_map_gpy,
                                const __grid_constant__ CUtensorMap tensor_map_a_inv,
                                const __grid_constant__ CUtensorMap tensor_map_cont_nlr,
                                double * u, double * v, double * p, double * a_inv,
@@ -248,7 +258,9 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
     double * us = reinterpret_cast<double*>(shared_mem);
     double * vs = us + ((BM+2) * (BN+2));
     double * ps = vs + ((BM+2) * (BN+2));
-    double * a_invs = ps + ((BM+2) * (BN+2));
+    double * gpxs = ps + ((BM+2) * (BN+2));
+    double * gpys = gpxs + ((BM+2) * (BN+2));
+    double * a_invs = gpys + ((BM+2) * (BN+2));
     // Continue to keep memory allocation for cont_nlr and
     // Jcont as (BM+2)*(BN+2). However, I will only compute
     // these for BM * BN cells.
@@ -257,15 +269,15 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
 
     // Initialize shared memory barrier with the number of threads participating in the barrier.
     #pragma nv_diag_suppress static_var_with_dynamic_init
-    __shared__ barrier bar_a[5];
+    __shared__ barrier bar_a[6];
     if (threadIdx.x == 0) {
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 6; i++) {
           init(&bar_a[i], blockDim.x);
         }
         cde::fence_proxy_async_shared_cta();
     }
     __syncthreads();
-    barrier::arrival_token token[4];
+    barrier::arrival_token token[6];
     if (threadIdx.x == 0) {
         cde::cp_async_bulk_tensor_2d_global_to_shared(us, &tensor_map_umom, cCol * BN, cRow * BM, bar_a[0]);
         token[0] = cuda::device::barrier_arrive_tx(bar_a[0], 1, (BM+2) * (BN+2) * sizeof(double));
@@ -273,15 +285,19 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
         token[1] = cuda::device::barrier_arrive_tx(bar_a[1], 1, (BM+2) * (BN+2) * sizeof(double));
         cde::cp_async_bulk_tensor_2d_global_to_shared(ps, &tensor_map_p, cCol * BN, cRow * BM, bar_a[2]);
         token[2] = cuda::device::barrier_arrive_tx(bar_a[2], 1, (BM+2) * (BN+2) * sizeof(double));
-        cde::cp_async_bulk_tensor_2d_global_to_shared(a_invs, &tensor_map_a_inv, cCol * BN, cRow * BM, bar_a[3]);
-        token[3] = cuda::device::barrier_arrive_tx(bar_a[3], 1, (BM+2) * (BN+2) * sizeof(double));
+        cde::cp_async_bulk_tensor_2d_global_to_shared(gpxs, &tensor_map_gpx, cCol * BN, cRow * BM, bar_a[3]);
+        token[2] = cuda::device::barrier_arrive_tx(bar_a[3], 1, (BM+2) * (BN+2) * sizeof(double));
+        cde::cp_async_bulk_tensor_2d_global_to_shared(gpys, &tensor_map_gpy, cCol * BN, cRow * BM, bar_a[4]);
+        token[2] = cuda::device::barrier_arrive_tx(bar_a[4], 1, (BM+2) * (BN+2) * sizeof(double));
+        cde::cp_async_bulk_tensor_2d_global_to_shared(a_invs, &tensor_map_a_inv, cCol * BN, cRow * BM, bar_a[5]);
+        token[3] = cuda::device::barrier_arrive_tx(bar_a[5], 1, (BM+2) * (BN+2) * sizeof(double));
     } else {
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 6; i++) {
             token[i] = bar_a[i].arrive();
         }
     }
 
-    for (int i=0; i < 4; i++) {
+    for (int i=0; i < 6; i++) {
       bar_a[i].wait(std::move(token[i]));
     }
 
@@ -298,10 +314,10 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
     int sidx = (threadRow + 1) * (BN + 2) + threadCol + 1;
 
     // Step 2 - Compute Jcont, cont_nlr
-    double phi_w = face_flux_mom(us[sidx - 1], us[sidx],     ps[sidx - 1], ps[sidx],     ps[sidx - 2], ps[sidx + 1], a_invs[sidx - 1], a_invs[sidx],     dx, dy);
-    double phi_e = face_flux_mom(us[sidx],     us[sidx + 1], ps[sidx],     ps[sidx + 1], ps[sidx - 1], ps[sidx + 2], a_invs[sidx],     a_invs[sidx + 1], dx, dy);
-    double phi_s = face_flux_mom(vs[sidx - (BN + 2)], vs[sidx],            ps[sidx - (BN + 2)], ps[sidx],            ps[sidx - 2*(BN + 2)], ps[sidx + (BN + 2)],   a_invs[sidx - (BN + 2)], a_invs[sidx],            dy, dx);
-    double phi_n = face_flux_mom(vs[sidx],            vs[sidx + (BN + 2)], ps[sidx],            ps[sidx + (BN + 2)], ps[sidx - (BN + 2)],   ps[sidx + 2*(BN + 2)], a_invs[sidx],            a_invs[sidx + (BN + 2)], dy, dx);
+    double phi_w = face_flux_mom(us[sidx - 1], us[sidx],     ps[sidx - 1], ps[sidx],     gpxs[sidx - 1], gpxs[sidx], a_invs[sidx - 1], a_invs[sidx],     dx, dy);
+    double phi_e = face_flux_mom(us[sidx],     us[sidx + 1], ps[sidx],     ps[sidx + 1], gpxs[sidx], gpxs[sidx + 1], a_invs[sidx],     a_invs[sidx + 1], dx, dy);
+    double phi_s = face_flux_mom(vs[sidx - (BN + 2)], vs[sidx],            ps[sidx - (BN + 2)], ps[sidx],            gpys[sidx - (BN + 2)], gpys[sidx],   a_invs[sidx - (BN + 2)], a_invs[sidx],            dy, dx);
+    double phi_n = face_flux_mom(vs[sidx],            vs[sidx + (BN + 2)], ps[sidx],            ps[sidx + (BN + 2)], gpys[sidx],   gpys[sidx + (BN + 2)], a_invs[sidx],            a_invs[sidx + (BN + 2)], dy, dx);
 
     cont_nlrs[sidx] += phi_e - phi_w + phi_n - phi_s;
 
@@ -320,7 +336,7 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
       // Wait for the group to have completed reading from shared memory.
       cde::cp_async_bulk_wait_group_read<0>();
 
-      for (int i = 0; i < 4; i++)
+      for (int i = 0; i < 6; i++)
         (&bar_a[i])->~barrier();
     }
 
@@ -386,11 +402,13 @@ __host__ double LidDrivenCavity::compute_mom_r_j() {
   // Launch the kernel for computing the residuals
   const uint BM = 32;
   const uint BN = 32;
-  int shared_memory_size = (BM + 2) * (BN + 2) * sizeof(double) * 11;
+  int shared_memory_size = (BM + 2) * (BN + 2) * sizeof(double) * 8;
   compute_rmom_j<BM,BN>
         <<<grid_size, block_size, shared_memory_size>>>(get_tensor_map(umom, nx+2, ny+2, BM+2, BN+2),
                                                         get_tensor_map(vmom, nx+2, ny+2, BM+2, BN+2),
                                                         get_tensor_map(pres, nx+2, ny+2, BM+2, BN+2),
+                                                        get_tensor_map(gpx, nx+2, ny+2, BM+2, BN+2),
+                                                        get_tensor_map(gpy, nx+2, ny+2, BM+2, BN+2),                                               
                                                         get_tensor_map(a_inv, nx+2, ny+2, BM+2, BN+2),
                                                         get_tensor_map(u_nlr, nx+2, ny+2, BM+2, BN+2),
                                                         get_tensor_map(v_nlr, nx+2, ny+2, BM+2, BN+2),
@@ -403,11 +421,13 @@ __host__ double LidDrivenCavity::compute_cont_r_j() {
   // Launch the kernel for computing the residuals
   const uint BM = 32;
   const uint BN = 32;
-  int shared_memory_size = (BM + 2) * (BN + 2) * sizeof(double) * 10;
+  int shared_memory_size = (BM + 2) * (BN + 2) * sizeof(double) * 7;
   compute_rcont_j<BM, BN>
         <<<grid_size, block_size, shared_memory_size>>>(get_tensor_map(umom, nx+2, ny+2, BM+2, BN+2),
                                                         get_tensor_map(vmom, nx+2, ny+2, BM+2, BN+2),
                                                         get_tensor_map(pres, nx+2, ny+2, BM+2, BN+2),
+                                                        get_tensor_map(gpx, nx+2, ny+2, BM+2, BN+2),
+                                                        get_tensor_map(gpy, nx+2, ny+2, BM+2, BN+2),                                                        
                                                         get_tensor_map(a_inv, nx+2, ny+2, BM+2, BN+2),
                                                         get_tensor_map(cont_nlr, nx+2, ny+2, BM+2, BN+2),
                                                         umom, vmom, pres, a_inv, cont_nlr, Jcont, nx, ny, dx, dy);
@@ -454,8 +474,8 @@ LidDrivenCavity::LidDrivenCavity(int nx_inp, int ny_inp, double nu_inp) {
     cudaMalloc(&umom, (nx + 2) * (ny + 2) * sizeof(double));
     cudaMalloc(&vmom, (nx + 2) * (ny + 2) * sizeof(double));
     cudaMalloc(&pres, (nx + 2) * (ny + 2) * sizeof(double));
-    cudaMalloc(&gradp, 2 * (nx + 2) * (ny + 2) * sizeof(double));
-    cudaMalloc(&phi, 2 * nx * ny * sizeof(double));
+    cudaMalloc(&gpx, (nx + 2) * (ny + 2) * sizeof(double));
+    cudaMalloc(&gpy, (nx + 2) * (ny + 2) * sizeof(double));
     cudaMalloc(&a_inv, (nx + 2) * (ny + 2) * sizeof(double));
     cudaMalloc(&deltaU, (nx + 2) * (ny + 2) * sizeof(double));
     cudaMalloc(&deltaV, (nx + 2) * (ny + 2) * sizeof(double));
