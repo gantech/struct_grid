@@ -47,7 +47,7 @@ __global__ void bottom_bc(double *u, double * v, double * p, int nx, int ny, dou
         double x = (0.5 + idx) * dx;
         u[idx + 1] = 0.0; // Wall velocity
         v[idx + 1] = 0.0; // No penetration
-        p[idx + 1] = p[(nx+2) + idx + 1]; // Reference pressure (could be zero or Neumann)
+        p[idx + 1] = p[(nx+2) + idx + 1]; // Neumann
     }
 }
 
@@ -58,7 +58,7 @@ __global__ void upper_bc(double *u, double * v, double * p, int nx, int ny, doub
         double x = (0.5 + idx) * dx;
         u[(ny * (nx+2)) + idx + 1] = 1.0; // Lid velocity
         v[(ny * (nx+2)) + idx + 1] = 0.0; // No penetration
-        p[(ny * (nx+2)) + idx + 1] = p[((ny-1) * (nx+2)) + idx + 1]; // Reference pressure (could be zero or Neumann)
+        p[(ny * (nx+2)) + idx + 1] = p[((ny-1) * (nx+2)) + idx + 1]; // Neumann
     }
 }
 
@@ -69,7 +69,10 @@ __global__ void left_bc(double *u, double * v, double * p, int nx, int ny, doubl
         double y = (0.5 + idx) * dy;
         u[( (idx+1) * (nx+2)) + 0] = 0.0; // Wall velocity
         v[( (idx+1) * (nx+2)) + 0] = 0.0; // No penetration
-        p[( (idx+1) * (nx+2)) + 0] = p[( (idx+1) * (nx+2)) + 1]; // Reference pressure (could be zero or Neumann)
+        if (idx == 0)
+          p[( (idx+1) * (nx+2)) + 0] = 0.0; // Reference pressure 
+        else
+          p[( (idx+1) * (nx+2)) + 0] = p[( (idx+1) * (nx+2)) + 1]; // Neumann
     }
 }
 
@@ -80,7 +83,7 @@ __global__ void right_bc(double *u, double * v, double * p, int nx, int ny, doub
         double y = (0.5 + idx) * dy;
         u[( (idx+1) * (nx+2)) + nx] = 0.0; // Wall velocity
         v[( (idx+1) * (nx+2)) + nx] = 0.0; // No penetration
-        p[( (idx+1) * (nx+2)) + nx] = p[( (idx+1) * (nx+2)) + nx - 1]; // Reference pressure (could be zero or Neumann)
+        p[( (idx+1) * (nx+2)) + nx] = p[( (idx+1) * (nx+2)) + nx - 1]; // Neumann
     }
 }
 
@@ -114,8 +117,8 @@ __device__ double face_flux_mom(double ul, double ur,
                                 double deltaface, double deltaperp) {
     double df_inv = 1.0 / deltaface;
     return 0.5 * (  (ul + ur)
-                + 0.5 * df_inv * (a_invl * gpl + a_invr * gpr)
-                - (a_invl + a_invr) * (pr - pl) ) * deltaperp;
+                + 0.5 * (a_invl * gpl + a_invr * gpr)
+                - df_inv * (a_invl + a_invr) * (pr - pl) ) * deltaperp;
 }
 
 // Create an aligned shared memory using a union
@@ -133,6 +136,7 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
                                const __grid_constant__ CUtensorMap tensor_map_a_inv,
                                const __grid_constant__ CUtensorMap tensor_map_u_nlr,
                                const __grid_constant__ CUtensorMap tensor_map_v_nlr,
+                               const __grid_constant__ CUtensorMap tensor_map_Jmom,
                                double * u, double * v, double * p, double * gpx, double * gpy, double * a_inv,
                                double * u_nlr, double * v_nlr, double * Jmom,
                                int nx, int ny, double dx, double dy,
@@ -201,27 +205,83 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
     int threadRow = threadIdx.x / BN;
     int threadCol = threadIdx.x % BN;
     int sidx = (threadRow + 1) * (BN + 2) + threadCol + 1;
+    int jsidx = (threadRow * BN + threadCol)*5;
 
     // Step 2 - Compute Jmom, u_nlr and v_nlr
-    double phi_w = face_flux_mom(us[sidx - 1], us[sidx],     ps[sidx - 1], ps[sidx],     gpxs[sidx - 1], gpxs[sidx], a_invs[sidx - 1], a_invs[sidx],     dx, dy);
-    double phi_e = face_flux_mom(us[sidx],     us[sidx + 1], ps[sidx],     ps[sidx + 1], gpxs[sidx], gpxs[sidx + 1], a_invs[sidx],     a_invs[sidx + 1], dx, dy);
-    double phi_s = face_flux_mom(vs[sidx - (BN + 2)], vs[sidx],            ps[sidx - (BN + 2)], ps[sidx],            gpys[sidx - (BN + 2)], gpys[sidx],   a_invs[sidx - (BN + 2)], a_invs[sidx],            dy, dx);
-    double phi_n = face_flux_mom(vs[sidx],            vs[sidx + (BN + 2)], ps[sidx],            ps[sidx + (BN + 2)], gpys[sidx],   gpys[sidx + (BN + 2)], a_invs[sidx],            a_invs[sidx + (BN + 2)], dy, dx);
+    double phi_w = 0.0;
+    if (cCol * BN + threadCol > 0)
+      phi_w = face_flux_mom(us[sidx - 1], us[sidx], ps[sidx - 1], ps[sidx], gpxs[sidx - 1], gpxs[sidx], a_invs[sidx - 1], a_invs[sidx], dx, dy);
+    double phi_e = 0.0;
+    if (cCol * BN + threadCol < (nx - 1))
+      phi_e = face_flux_mom(us[sidx], us[sidx + 1], ps[sidx], ps[sidx + 1], gpxs[sidx], gpxs[sidx + 1], a_invs[sidx], a_invs[sidx + 1], dx, dy);
+    double phi_s = 0.0;
+    if (cRow * BM + threadRow > 0)
+      phi_s = face_flux_mom(vs[sidx - (BN + 2)], vs[sidx], ps[sidx - (BN + 2)], ps[sidx], gpys[sidx - (BN + 2)], gpys[sidx], a_invs[sidx - (BN + 2)], a_invs[sidx], dy, dx);
+    double phi_n = 0.0;
+    if (cRow * BM + threadRow < (ny - 1))
+      phi_n = face_flux_mom(vs[sidx], vs[sidx + (BN + 2)], ps[sidx], ps[sidx + (BN + 2)], gpys[sidx], gpys[sidx + (BN + 2)], a_invs[sidx], a_invs[sidx + (BN + 2)], dy, dx);
 
+    double jij = -4.0;
+    double jip1j = 1.0;
+    double jim1j = 1.0;
+    double jijp1 = 1.0;
+    double jijm1 = 1.0;
+
+    double ruadd = 0.0;
+    double rvadd = 0.0;
+    if (col == 0) {
+      jij -= 2.0;
+      jip1j += 0.3333333333333333 ;
+      jim1j = 0.0;
+      ruadd += 8.0 / 3.0 * nu * us[sidx];
+      rvadd += 8.0 / 3.0 * nu * vs[sidx];
+    } else if (col == (nx - 1)) {
+      jij -= 2.0;
+      jim1j += 0.3333333333333333;
+      jip1j = 0.0;
+      ruadd += 8.0 / 3.0 * nu * us[sidx];
+      rvadd += 8.0 / 3.0 * nu * vs[sidx];
+    }
+
+    if (row == 0) {
+      jij -= 2.0;
+      jijp1 += 0.3333333333333333;
+      jijm1 = 0.0;
+      ruadd += 8.0 / 3.0 * nu * us[sidx];
+      rvadd += 8.0 / 3.0 * nu * vs[sidx];
+    } else if (row == (ny - 1)) {
+      jij -= 2.0;
+      jijm1 += 0.3333333333333333;
+      jijp1 = 0.0;
+      ruadd += 8.0 / 3.0 * nu * us[sidx];
+      rvadd += 8.0 / 3.0 * nu * vs[sidx];
+    }
+
+    double small_value = 1e-12;    
     u_nlrs[sidx] += dx * dy * dt_inv + 0.5 * (ps[sidx + 1] - ps[sidx - 1])
-                    - (phi_w > 0.0 ? us[sidx-1] : us[sidx]) * phi_w
-                    + (phi_e > 0.0 ? us[sidx]   : us[sidx+1]) * phi_e
-                    - (phi_s > 0.0 ? us[sidx - (BN + 2)] : us[sidx]           ) * phi_s
-                    + (phi_n > 0.0 ? us[sidx]            : us[sidx + (BN + 2)]) * phi_n
-                    - nu * ( 4.0 * us[sidx] - us[sidx-1] - us[sidx+1] - us[sidx - (BN + 2)] - us[sidx + (BN + 2)]);
+                    - (phi_w < small_value ? us[sidx] : us[sidx-1]) * phi_w
+                    + (phi_e > small_value ? us[sidx] : us[sidx+1]) * phi_e
+                    - (phi_s < small_value ? us[sidx] : us[sidx - (BN + 2)]) * phi_s
+                    + (phi_n > small_value ? us[sidx] : us[sidx + (BN + 2)]) * phi_n
+                    + nu * ( jij * us[sidx] + jim1j * us[sidx-1] + jip1j * us[sidx+1] + jijm1 * us[sidx - (BN + 2)] + jijp1 * us[sidx + (BN + 2)])
+                    + ruadd;
 
     v_nlrs[sidx] += dx * dy * dt_inv + 0.5 * (ps[sidx + (BN + 2)] - ps[sidx - (BN + 2)])
-                    - (phi_w > 0.0 ? vs[sidx-1] : vs[sidx]) * phi_w
-                    + (phi_e > 0.0 ? vs[sidx]   : vs[sidx+1]) * phi_e
-                    - (phi_s > 0.0 ? vs[sidx - (BN + 2)] : vs[sidx]           ) * phi_s
-                    + (phi_n > 0.0 ? vs[sidx]            : vs[sidx + (BN + 2)]) * phi_n
-                    - nu * ( 4.0 * vs[sidx] - vs[sidx-1] - vs[sidx+1] - vs[sidx - (BN + 2)] - vs[sidx + (BN + 2)]);
+                    - (phi_w < small_value ? vs[sidx] : vs[sidx-1]) * phi_w
+                    + (phi_e > small_value ? vs[sidx] : vs[sidx+1]) * phi_e
+                    - (phi_s < small_value ? vs[sidx] : vs[sidx - (BN + 2)]) * phi_s
+                    + (phi_n > small_value ? vs[sidx] : vs[sidx + (BN + 2)]) * phi_n
+                    + nu * ( jij * vs[sidx] + jim1j * vs[sidx-1] + jip1j * vs[sidx+1] + jijm1 * vs[sidx - (BN + 2)] + jijp1 * vs[sidx + (BN + 2)])
+                    + rvadd;
 
+    Jmoms[jsidx] = nu * jij + dx * dy * dt_inv - (phi_w < small_value ? phi_w : 0.0)
+                                           + (phi_e > small_value ? phi_e : 0.0)
+                                           - (phi_s < small_value ? phi_s : 0.0)
+                                           + (phi_n > small_value ? phi_n : 0.0);
+    Jmoms[jsidx+1] = nu * jim1j - (phi_w > small_value ? phi_w : 0.0);
+    Jmoms[jsidx+2] = nu * jip1j + (phi_e < small_value ? phi_e : 0.0);
+    Jmoms[jsidx+3] = nu * jijm1 - (phi_s > small_value ? phi_s : 0.0);
+    Jmoms[jsidx+4] = nu * jijp1 + (phi_n < small_value ? phi_n : 0.0);
     // printf("Thread (%d,%d) sidx: %d, u_nlr: %f, v_nlr: %f\n", threadRow, threadCol, sidx, u_nlrs[sidx], v_nlrs[sidx]);
 
     // Wait for shared memory writes to be visible to TMA engine.
@@ -247,6 +307,14 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
       // Wait for the group to have completed reading from shared memory.
       cde::cp_async_bulk_wait_group_read<0>();
 
+      cde::cp_async_bulk_tensor_2d_shared_to_global(&tensor_map_Jmom, 1, cCol * BN, cRow * BM,
+                                                    Jmoms);
+      // Wait for TMA transfer to have finished reading shared memory.
+      // Create a "bulk async-group" out of the previous bulk copy operation.
+      cde::cp_async_bulk_commit_group();
+      // Wait for the group to have completed reading from shared memory.
+      cde::cp_async_bulk_wait_group_read<0>();
+
       for (int i = 0; i < 6; i++)
         (&bar_a[i])->~barrier();
     }
@@ -261,6 +329,7 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
                                const __grid_constant__ CUtensorMap tensor_map_gpy,
                                const __grid_constant__ CUtensorMap tensor_map_a_inv,
                                const __grid_constant__ CUtensorMap tensor_map_cont_nlr,
+                               const __grid_constant__ CUtensorMap tensor_map_Jcont,
                                double * u, double * v, double * p, double * gpx, double * gpy, double * a_inv,
                                double * cont_nlr, double * Jcont,
                                int nx, int ny, double dx, double dy) {
@@ -326,6 +395,7 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
     int threadRow = threadIdx.x / BN;
     int threadCol = threadIdx.x % BN;
     int sidx = (threadRow + 1) * (BN + 2) + threadCol + 1;
+    inst jsidx = (threadRow * BN + threadCol)*5;
 
     // Step 2 - Compute Jcont, cont_nlr
     double phi_w = face_flux_mom(us[sidx - 1], us[sidx],     ps[sidx - 1], ps[sidx],     gpxs[sidx - 1], gpxs[sidx], a_invs[sidx - 1], a_invs[sidx],     dx, dy);
@@ -334,6 +404,15 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
     double phi_n = face_flux_mom(vs[sidx],            vs[sidx + (BN + 2)], ps[sidx],            ps[sidx + (BN + 2)], gpys[sidx],   gpys[sidx + (BN + 2)], a_invs[sidx],            a_invs[sidx + (BN + 2)], dy, dx);
 
     cont_nlrs[sidx] += phi_e - phi_w + phi_n - phi_s;
+
+    Jconts[jsidx] = 0.5 *  (   (a_invs[sidx] + a_invs[sidx + 1]) 
+                             + (a_invs[sidx - 1] + a_invs[sidx])
+                             + (a_invs[sidx - (BN + 2)] + a_invs[sidx])
+                             + (a_invs[sidx + (BN + 2)] + a_invs[sidx]) );
+    Jconts[jsidx+1] = -0.5 * (a_invs[sidx - 1] + a_invs[sidx]);
+    Jconts[jsidx+2] = -0.5 * (a_invs[sidx] + a_invs[sidx + 1]);
+    Jconts[jsidx+3] = -0.5 * (a_invs[sidx - (BN + 2)] + a_invs[sidx]);
+    Jconts[jsidx+4] = -0.5 * (a_invs[sidx] + a_invs[sidx + (BN + 2)]);
 
     // Wait for shared memory writes to be visible to TMA engine.
     cde::fence_proxy_async_shared_cta();
@@ -344,6 +423,14 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
     if (threadIdx.x == 0) {
       cde::cp_async_bulk_tensor_2d_shared_to_global(&tensor_map_cont_nlr, cCol * BN, cRow * BM,
                                                     cont_nlrs);
+      // Wait for TMA transfer to have finished reading shared memory.
+      // Create a "bulk async-group" out of the previous bulk copy operation.
+      cde::cp_async_bulk_commit_group();
+      // Wait for the group to have completed reading from shared memory.
+      cde::cp_async_bulk_wait_group_read<0>();
+
+      cde::cp_async_bulk_tensor_2d_shared_to_global(&tensor_map_Jcont, 1, cCol * BN, cRow * BM,
+                                                    Jmoms);
       // Wait for TMA transfer to have finished reading shared memory.
       // Create a "bulk async-group" out of the previous bulk copy operation.
       cde::cp_async_bulk_commit_group();
@@ -412,6 +499,52 @@ CUtensorMap get_tensor_map(double *A, const int M, const int N,
 
 }
 
+CUtensorMap get_tensor_map(double *A, const int M, const int N, const int K,
+                           const int BM, const int BN, const int BK) {
+
+  CUtensorMap tensor_map_a{};
+  // rank is the number of dimensions of the array.
+  constexpr uint32_t rank = 3;
+  uint64_t size[rank] = {M, N, K};
+  // The stride is the number of bytes to traverse from the first element of one row to the next.
+  // It must be a multiple of 16.
+  uint64_t stride[rank - 1] = {(K * N) * sizeof(double), (K) * sizeof(double)};
+  // The box_size is the size of the shared memory buffer that is used as the
+  // destination of a TMA transfer.
+  uint32_t box_size[rank] = {BK, BN, BM};
+  // The distance between elements in units of sizeof(element). A stride of 2
+  // can be used to load only the real component of a complex-valued tensor, for instance.
+  uint32_t elem_stride[rank] = {1, 1, 1};
+
+  // Get a function pointer to the cuTensorMapEncodeTiled driver API.
+  auto cuTensorMapEncodeTiled = get_cuTensorMapEncodeTiled();
+
+  // Create the tensor descriptor.
+  CUresult res_a = cuTensorMapEncodeTiled(
+    &tensor_map_a,                // CUtensorMap *tensorMap,
+    CUtensorMapDataType::CU_TENSOR_MAP_DATA_TYPE_FLOAT64,
+    rank,                       // cuuint32_t tensorRank,
+    A,                 // void *globalAddress,
+    size,                       // const cuuint64_t *globalDim,
+    stride,                     // const cuuint64_t *globalStrides,
+    box_size,                   // const cuuint32_t *boxDim,
+    elem_stride,                // const cuuint32_t *elementStrides,
+    // Interleave patterns can be used to accelerate loading of values that
+    // are less than 4 bytes long.
+    CUtensorMapInterleave::CU_TENSOR_MAP_INTERLEAVE_NONE,
+    // Swizzling can be used to avoid shared memory bank conflicts.
+    CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE,
+    // L2 Promotion can be used to widen the effect of a cache-policy to a wider
+    // set of L2 cache lines.
+    CUtensorMapL2promotion::CU_TENSOR_MAP_L2_PROMOTION_NONE,
+    // Don't set out-of-bounds elements to anything during TMA transfers
+    CUtensorMapFloatOOBfill::CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE
+  );
+
+  return tensor_map_a;
+
+}
+
 __host__ double LidDrivenCavity::compute_mom_r_j() {
   // Launch the kernel for computing the residuals
   const uint BM = 32;
@@ -432,6 +565,7 @@ __host__ double LidDrivenCavity::compute_mom_r_j() {
                                                         get_tensor_map(a_inv, nx+2, ny+2, BM+2, BN+2),
                                                         get_tensor_map(u_nlr, nx+2, ny+2, BM+2, BN+2),
                                                         get_tensor_map(v_nlr, nx+2, ny+2, BM+2, BN+2),
+                                                        get_tensor_map(Jmom, nx, ny, 5, BM, BN, 5),
                                                         umom, vmom, pres, gpx, gpy, a_inv, u_nlr, v_nlr, Jmom,
                                                         nx, ny, dx, dy, nu, dt);
   cudaCheck2(cudaDeviceSynchronize());
@@ -455,6 +589,7 @@ __host__ double LidDrivenCavity::compute_cont_r_j() {
                                                         get_tensor_map(gpy, nx+2, ny+2, BM+2, BN+2),                                                        
                                                         get_tensor_map(a_inv, nx+2, ny+2, BM+2, BN+2),
                                                         get_tensor_map(cont_nlr, nx+2, ny+2, BM+2, BN+2),
+                                                        get_tensor_map(Jcont, nx, ny, 5, BM, BN, 5),
                                                         umom, vmom, pres, gpx, gpy, a_inv, cont_nlr, Jcont, nx, ny, dx, dy);
   cudaCheck2(cudaDeviceSynchronize());
   return 1.0;
