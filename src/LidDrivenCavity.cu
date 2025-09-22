@@ -226,6 +226,7 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
 
     double ruadd = 0.0;
     double rvadd = 0.0;
+    int col = cCol * BN + threadCol;
     if (col == 0) {
       jij -= 2.0;
       jip1j += 0.3333333333333333 ;
@@ -239,7 +240,7 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
       ruadd += 8.0 / 3.0 * nu * us[sidx];
       rvadd += 8.0 / 3.0 * nu * vs[sidx];
     }
-
+    int row = cRow * BM + threadRow;
     if (row == 0) {
       jij -= 2.0;
       jijp1 += 0.3333333333333333;
@@ -271,7 +272,7 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
                     + nu * ( jij * vs[sidx] + jim1j * vs[sidx-1] + jip1j * vs[sidx+1] + jijm1 * vs[sidx - (BN + 2)] + jijp1 * vs[sidx + (BN + 2)])
                     + rvadd;
 
-    int jidx = ((cRow * BM + threadRow) * N + (cCol * BN + threadCol) ) *5;
+    int jidx = ((cRow * BM + threadRow) * nx + (cCol * BN + threadCol) ) *5;
     Jmom[jidx] = nu * jij + dx * dy * dt_inv - (phi_w < small_value ? phi_w : 0.0)
                                            + (phi_e > small_value ? phi_e : 0.0)
                                            - (phi_s < small_value ? phi_s : 0.0)
@@ -392,7 +393,7 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
 
     cont_nlrs[sidx] += phi_e - phi_w + phi_n - phi_s;
 
-    int jidx = ((cRow * BM + threadRow) * N + (cCol * BN + threadCol) ) * 5;
+    int jidx = ((cRow * BM + threadRow) * nx + (cCol * BN + threadCol) ) * 5;
     Jcont[jidx] = 0.5 *  (   (a_invs[sidx] + a_invs[sidx + 1]) 
                              + (a_invs[sidx - 1] + a_invs[sidx])
                              + (a_invs[sidx - (BN + 2)] + a_invs[sidx])
@@ -411,14 +412,6 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
     if (threadIdx.x == 0) {
       cde::cp_async_bulk_tensor_2d_shared_to_global(&tensor_map_cont_nlr, cCol * BN, cRow * BM,
                                                     cont_nlrs);
-      // Wait for TMA transfer to have finished reading shared memory.
-      // Create a "bulk async-group" out of the previous bulk copy operation.
-      cde::cp_async_bulk_commit_group();
-      // Wait for the group to have completed reading from shared memory.
-      cde::cp_async_bulk_wait_group_read<0>();
-
-      cde::cp_async_bulk_tensor_2d_shared_to_global(&tensor_map_Jcont, 1, cCol * BN, cRow * BM,
-                                                    Jmoms);
       // Wait for TMA transfer to have finished reading shared memory.
       // Create a "bulk async-group" out of the previous bulk copy operation.
       cde::cp_async_bulk_commit_group();
