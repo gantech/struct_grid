@@ -226,7 +226,7 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
 
     double ruadd = 0.0;
     double rvadd = 0.0;
-    int col = cCol * BN + threadCol;
+    int col = cCol + threadCol;
     if (col == 0) {
       jij -= 2.0;
       jip1j += 0.3333333333333333 ;
@@ -240,7 +240,7 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
       ruadd += 8.0 / 3.0 * nu * us[sidx];
       rvadd += 8.0 / 3.0 * nu * vs[sidx];
     }
-    int row = cRow * BM + threadRow;
+    int row = cRow + threadRow;
     if (row == 0) {
       jij -= 2.0;
       jijp1 += 0.3333333333333333;
@@ -272,7 +272,8 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
                     + nu * ( jij * vs[sidx] + jim1j * vs[sidx-1] + jip1j * vs[sidx+1] + jijm1 * vs[sidx - (BN + 2)] + jijp1 * vs[sidx + (BN + 2)])
                     + rvadd;
 
-    int jidx = ((cRow * BM + threadRow) * nx + (cCol * BN + threadCol) ) *5;
+    int jidx = ((cRow + threadRow) * nx + (cCol + threadCol) ) *5;
+    // printf("cRow = %d, cCol= %d, row = %d, col = %d, jidx = %d \n", cRow, cCol, row, col, jidx);
     Jmom[jidx] = nu * jij + dx * dy * dt_inv - (phi_w < small_value ? phi_w : 0.0)
                                            + (phi_e > small_value ? phi_e : 0.0)
                                            - (phi_s < small_value ? phi_s : 0.0)
@@ -386,14 +387,14 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
     int sidx = (threadRow + 1) * (BN + 2) + threadCol + 1;
 
     // Step 2 - Compute Jcont, cont_nlr
-    double phi_w = face_flux_mom(us[sidx - 1], us[sidx],     ps[sidx - 1], ps[sidx],     gpxs[sidx - 1], gpxs[sidx], a_invs[sidx - 1], a_invs[sidx],     dx, dy);
-    double phi_e = face_flux_mom(us[sidx],     us[sidx + 1], ps[sidx],     ps[sidx + 1], gpxs[sidx], gpxs[sidx + 1], a_invs[sidx],     a_invs[sidx + 1], dx, dy);
-    double phi_s = face_flux_mom(vs[sidx - (BN + 2)], vs[sidx],            ps[sidx - (BN + 2)], ps[sidx],            gpys[sidx - (BN + 2)], gpys[sidx],   a_invs[sidx - (BN + 2)], a_invs[sidx],            dy, dx);
-    double phi_n = face_flux_mom(vs[sidx],            vs[sidx + (BN + 2)], ps[sidx],            ps[sidx + (BN + 2)], gpys[sidx],   gpys[sidx + (BN + 2)], a_invs[sidx],            a_invs[sidx + (BN + 2)], dy, dx);
+    double phi_w = face_flux_mom(us[sidx - 1], us[sidx], ps[sidx - 1], ps[sidx], gpxs[sidx - 1], gpxs[sidx], a_invs[sidx - 1], a_invs[sidx], dx, dy);
+    double phi_e = face_flux_mom(us[sidx], us[sidx + 1], ps[sidx], ps[sidx + 1], gpxs[sidx], gpxs[sidx + 1], a_invs[sidx], a_invs[sidx + 1], dx, dy);
+    double phi_s = face_flux_mom(vs[sidx - (BN + 2)], vs[sidx], ps[sidx - (BN + 2)], ps[sidx], gpys[sidx - (BN + 2)], gpys[sidx], a_invs[sidx - (BN + 2)], a_invs[sidx], dy, dx);
+    double phi_n = face_flux_mom(vs[sidx], vs[sidx + (BN + 2)], ps[sidx], ps[sidx + (BN + 2)], gpys[sidx], gpys[sidx + (BN + 2)], a_invs[sidx], a_invs[sidx + (BN + 2)], dy, dx);
 
     cont_nlrs[sidx] += phi_e - phi_w + phi_n - phi_s;
 
-    int jidx = ((cRow * BM + threadRow) * nx + (cCol * BN + threadCol) ) * 5;
+    int jidx = ((cRow + threadRow) * nx + (cCol + threadCol) ) * 5;
     Jcont[jidx] = 0.5 *  (   (a_invs[sidx] + a_invs[sidx + 1]) 
                              + (a_invs[sidx - 1] + a_invs[sidx])
                              + (a_invs[sidx - (BN + 2)] + a_invs[sidx])
@@ -531,7 +532,7 @@ __host__ double LidDrivenCavity::compute_mom_r_j() {
   const uint BM = 32;
   const uint BN = 32;
   //int shared_memory_size = (BM + 2) * (BN + 2) * sizeof(double) * 13;
-  int shared_memory_size = 76 * 128 * 8;
+  int shared_memory_size = 76 * 128 * 10;
 
   cudaFuncSetAttribute(compute_rmom_j<BM, BN>, 
       cudaFuncAttributeMaxDynamicSharedMemorySize, 
@@ -556,7 +557,7 @@ __host__ double LidDrivenCavity::compute_cont_r_j() {
   // Launch the kernel for computing the residuals
   const uint BM = 32;
   const uint BN = 32;
-  int shared_memory_size = 76 * 128 * 7;
+  int shared_memory_size = 76 * 128 * 10;
   cudaFuncSetAttribute(compute_rcont_j<BM, BN>, 
       cudaFuncAttributeMaxDynamicSharedMemorySize, 
       shared_memory_size);
@@ -619,8 +620,8 @@ LidDrivenCavity::LidDrivenCavity(int nx_inp, int ny_inp, double nu_inp) {
     cudaMalloc(&deltaU, (nx + 2) * (ny + 2) * sizeof(double));
     cudaMalloc(&deltaV, (nx + 2) * (ny + 2) * sizeof(double));
     cudaMalloc(&deltaP, (nx + 2) * (ny + 2) * sizeof(double));
-    cudaMalloc(&Jmom, (nx + 2) * (ny + 2) * 5 * sizeof(double));
-    cudaMalloc(&Jcont, (nx + 2) * (ny + 2) * 5 * sizeof(double));
+    cudaMalloc(&Jmom, nx * ny * 5 * sizeof(double));
+    cudaMalloc(&Jcont, nx * ny * 5 * sizeof(double));
     cudaMalloc(&u_nlr, (nx + 2) * (ny + 2) * sizeof(double));
     cudaMalloc(&v_nlr, (nx + 2) * (ny + 2) * sizeof(double));
     cudaMalloc(&cont_nlr, (nx + 2) * (ny + 2) * sizeof(double));
