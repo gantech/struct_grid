@@ -136,7 +136,6 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
                                const __grid_constant__ CUtensorMap tensor_map_a_inv,
                                const __grid_constant__ CUtensorMap tensor_map_u_nlr,
                                const __grid_constant__ CUtensorMap tensor_map_v_nlr,
-                               const __grid_constant__ CUtensorMap tensor_map_Jmom,
                                double * u, double * v, double * p, double * gpx, double * gpy, double * a_inv,
                                double * u_nlr, double * v_nlr, double * Jmom,
                                int nx, int ny, double dx, double dy,
@@ -157,7 +156,6 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
     // these for BM * BN cells.
     double * u_nlrs = a_invs + 76 * 16;
     double * v_nlrs = u_nlrs + 76 * 16;
-    double * Jmoms = v_nlrs + 76 * 16;
 
     // Initialize shared memory barrier with the number of threads participating in the barrier.
     #pragma nv_diag_suppress static_var_with_dynamic_init
@@ -205,7 +203,6 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
     int threadRow = threadIdx.x / BN;
     int threadCol = threadIdx.x % BN;
     int sidx = (threadRow + 1) * (BN + 2) + threadCol + 1;
-    int jsidx = (threadRow * BN + threadCol)*5;
 
     // Step 2 - Compute Jmom, u_nlr and v_nlr
     double phi_w = 0.0;
@@ -274,14 +271,15 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
                     + nu * ( jij * vs[sidx] + jim1j * vs[sidx-1] + jip1j * vs[sidx+1] + jijm1 * vs[sidx - (BN + 2)] + jijp1 * vs[sidx + (BN + 2)])
                     + rvadd;
 
-    Jmoms[jsidx] = nu * jij + dx * dy * dt_inv - (phi_w < small_value ? phi_w : 0.0)
+    int jidx = ((cRow * BM + threadRow) * N + (cCol * BN + threadCol) ) *5;
+    Jmom[jidx] = nu * jij + dx * dy * dt_inv - (phi_w < small_value ? phi_w : 0.0)
                                            + (phi_e > small_value ? phi_e : 0.0)
                                            - (phi_s < small_value ? phi_s : 0.0)
                                            + (phi_n > small_value ? phi_n : 0.0);
-    Jmoms[jsidx+1] = nu * jim1j - (phi_w > small_value ? phi_w : 0.0);
-    Jmoms[jsidx+2] = nu * jip1j + (phi_e < small_value ? phi_e : 0.0);
-    Jmoms[jsidx+3] = nu * jijm1 - (phi_s > small_value ? phi_s : 0.0);
-    Jmoms[jsidx+4] = nu * jijp1 + (phi_n < small_value ? phi_n : 0.0);
+    Jmom[jidx+1] = nu * jim1j - (phi_w > small_value ? phi_w : 0.0);
+    Jmom[jidx+2] = nu * jip1j + (phi_e < small_value ? phi_e : 0.0);
+    Jmom[jidx+3] = nu * jijm1 - (phi_s > small_value ? phi_s : 0.0);
+    Jmom[jidx+4] = nu * jijp1 + (phi_n < small_value ? phi_n : 0.0);
     // printf("Thread (%d,%d) sidx: %d, u_nlr: %f, v_nlr: %f\n", threadRow, threadCol, sidx, u_nlrs[sidx], v_nlrs[sidx]);
 
     // Wait for shared memory writes to be visible to TMA engine.
@@ -307,14 +305,6 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
       // Wait for the group to have completed reading from shared memory.
       cde::cp_async_bulk_wait_group_read<0>();
 
-      cde::cp_async_bulk_tensor_2d_shared_to_global(&tensor_map_Jmom, 1, cCol * BN, cRow * BM,
-                                                    Jmoms);
-      // Wait for TMA transfer to have finished reading shared memory.
-      // Create a "bulk async-group" out of the previous bulk copy operation.
-      cde::cp_async_bulk_commit_group();
-      // Wait for the group to have completed reading from shared memory.
-      cde::cp_async_bulk_wait_group_read<0>();
-
       for (int i = 0; i < 6; i++)
         (&bar_a[i])->~barrier();
     }
@@ -329,7 +319,6 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
                                const __grid_constant__ CUtensorMap tensor_map_gpy,
                                const __grid_constant__ CUtensorMap tensor_map_a_inv,
                                const __grid_constant__ CUtensorMap tensor_map_cont_nlr,
-                               const __grid_constant__ CUtensorMap tensor_map_Jcont,
                                double * u, double * v, double * p, double * gpx, double * gpy, double * a_inv,
                                double * cont_nlr, double * Jcont,
                                int nx, int ny, double dx, double dy) {
@@ -348,7 +337,6 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
     // Jcont as (BM+2)*(BN+2). However, I will only compute
     // these for BM * BN cells.
     double * cont_nlrs = a_invs + 76 * 16;
-    double * Jconts = cont_nlrs + 76 * 16;
 
     // Initialize shared memory barrier with the number of threads participating in the barrier.
     #pragma nv_diag_suppress static_var_with_dynamic_init
@@ -395,7 +383,6 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
     int threadRow = threadIdx.x / BN;
     int threadCol = threadIdx.x % BN;
     int sidx = (threadRow + 1) * (BN + 2) + threadCol + 1;
-    inst jsidx = (threadRow * BN + threadCol)*5;
 
     // Step 2 - Compute Jcont, cont_nlr
     double phi_w = face_flux_mom(us[sidx - 1], us[sidx],     ps[sidx - 1], ps[sidx],     gpxs[sidx - 1], gpxs[sidx], a_invs[sidx - 1], a_invs[sidx],     dx, dy);
@@ -405,14 +392,15 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
 
     cont_nlrs[sidx] += phi_e - phi_w + phi_n - phi_s;
 
-    Jconts[jsidx] = 0.5 *  (   (a_invs[sidx] + a_invs[sidx + 1]) 
+    int jidx = ((cRow * BM + threadRow) * N + (cCol * BN + threadCol) ) * 5;
+    Jcont[jidx] = 0.5 *  (   (a_invs[sidx] + a_invs[sidx + 1]) 
                              + (a_invs[sidx - 1] + a_invs[sidx])
                              + (a_invs[sidx - (BN + 2)] + a_invs[sidx])
                              + (a_invs[sidx + (BN + 2)] + a_invs[sidx]) );
-    Jconts[jsidx+1] = -0.5 * (a_invs[sidx - 1] + a_invs[sidx]);
-    Jconts[jsidx+2] = -0.5 * (a_invs[sidx] + a_invs[sidx + 1]);
-    Jconts[jsidx+3] = -0.5 * (a_invs[sidx - (BN + 2)] + a_invs[sidx]);
-    Jconts[jsidx+4] = -0.5 * (a_invs[sidx] + a_invs[sidx + (BN + 2)]);
+    Jcont[jidx+1] = -0.5 * (a_invs[sidx - 1] + a_invs[sidx]);
+    Jcont[jidx+2] = -0.5 * (a_invs[sidx] + a_invs[sidx + 1]);
+    Jcont[jidx+3] = -0.5 * (a_invs[sidx - (BN + 2)] + a_invs[sidx]);
+    Jcont[jidx+4] = -0.5 * (a_invs[sidx] + a_invs[sidx + (BN + 2)]);
 
     // Wait for shared memory writes to be visible to TMA engine.
     cde::fence_proxy_async_shared_cta();
@@ -550,7 +538,7 @@ __host__ double LidDrivenCavity::compute_mom_r_j() {
   const uint BM = 32;
   const uint BN = 32;
   //int shared_memory_size = (BM + 2) * (BN + 2) * sizeof(double) * 13;
-  int shared_memory_size = 76 * 128 * 10;
+  int shared_memory_size = 76 * 128 * 8;
 
   cudaFuncSetAttribute(compute_rmom_j<BM, BN>, 
       cudaFuncAttributeMaxDynamicSharedMemorySize, 
@@ -565,7 +553,6 @@ __host__ double LidDrivenCavity::compute_mom_r_j() {
                                                         get_tensor_map(a_inv, nx+2, ny+2, BM+2, BN+2),
                                                         get_tensor_map(u_nlr, nx+2, ny+2, BM+2, BN+2),
                                                         get_tensor_map(v_nlr, nx+2, ny+2, BM+2, BN+2),
-                                                        get_tensor_map(Jmom, nx, ny, 5, BM, BN, 5),
                                                         umom, vmom, pres, gpx, gpy, a_inv, u_nlr, v_nlr, Jmom,
                                                         nx, ny, dx, dy, nu, dt);
   cudaCheck2(cudaDeviceSynchronize());
@@ -576,7 +563,7 @@ __host__ double LidDrivenCavity::compute_cont_r_j() {
   // Launch the kernel for computing the residuals
   const uint BM = 32;
   const uint BN = 32;
-  int shared_memory_size = (BM + 2) * (BN + 2) * sizeof(double) * 12;
+  int shared_memory_size = 76 * 128 * 7;
   cudaFuncSetAttribute(compute_rcont_j<BM, BN>, 
       cudaFuncAttributeMaxDynamicSharedMemorySize, 
       shared_memory_size);
@@ -589,7 +576,6 @@ __host__ double LidDrivenCavity::compute_cont_r_j() {
                                                         get_tensor_map(gpy, nx+2, ny+2, BM+2, BN+2),                                                        
                                                         get_tensor_map(a_inv, nx+2, ny+2, BM+2, BN+2),
                                                         get_tensor_map(cont_nlr, nx+2, ny+2, BM+2, BN+2),
-                                                        get_tensor_map(Jcont, nx, ny, 5, BM, BN, 5),
                                                         umom, vmom, pres, gpx, gpy, a_inv, cont_nlr, Jcont, nx, ny, dx, dy);
   cudaCheck2(cudaDeviceSynchronize());
   return 1.0;
