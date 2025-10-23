@@ -22,7 +22,7 @@ check_language(CUDA)
  
 include_directories(${CUDA_INCLUDE_DIRS})
 
-add_library(linear_solvers STATIC LinearSolver.cu Jacobi.cu ADI.cu CG.cu Multigrid.cu)
+add_library(linear_solvers STATIC LinearSolver.cu Jacobi.cu ADI.cu CG.cu BiCGStab.cu Multigrid.cu)
 set_target_properties(linear_solvers PROPERTIES 
     CUDA_ARCHITECTURES "90"
     CUDA_SEPARABLE_COMPILATION ON

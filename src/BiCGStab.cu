@@ -27,7 +27,7 @@ __global__ void update_deltat_r(double *deltaT, double * pvec, double * R, doubl
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if ( idx < ntot ) {
         deltaT[idx] += alpha * pvec[idx] + omegak * svec[idx];
-        R[idx] = svec[idx] - omegak * tvec;
+        R[idx] = svec[idx] - omegak * tvec[idx];
     }
 }
 
