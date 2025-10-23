@@ -7,6 +7,7 @@
 #include "ADI.h"
 #include "Multigrid.h"
 #include "CG.h"
+#include "BiCGStab.h"
 #include <thrust/device_vector.h>
 
 namespace LaplaceHeatNS {

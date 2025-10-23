@@ -192,8 +192,10 @@ __global__ void compute_r_j(double *T, double *J, double *R, int nx, int ny, dou
             solver = new MultiGridNS::MultiGrid(nx, ny, J, deltaT, nlr, 4, "Jacobi");
         } else if (solver_type == "CG" ) {
             solver = new CGNS::CG(nx, ny, J, deltaT, nlr);
+        } else if (solver_type == "BiCGStab" ) {
+            solver = new BiCGStabNS::BiCGStab(nx, ny, J, deltaT, nlr);
         } else {
-            std::cout << "Invalid solver type. Availabl solvers are Jacobi and ADI. " << std::endl;
+            std::cout << "Invalid solver type. Available solvers are Jacobi, ADI, MG, CG, and BiCGStab." << std::endl;
             exit(1);
         }
 
@@ -318,6 +320,21 @@ int main() {
     }
     resid_file_cg.close();
     delete lcg;
+
+    std::ofstream resid_file_bicgstab("bicgstab_resid.txt");
+    resid_file_bicgstab << "Iter, Residual" << std::endl;
+    LaplaceHeatNS::LaplaceHeat * lbicgstab = new LaplaceHeatNS::LaplaceHeat(nx, ny, 0.01, "BiCGStab");
+    lbicgstab->initialize_const(lbicgstab->T, 300.0, (nx+2)*(ny+2));
+    lbicgstab->apply_bc();
+    for (int i = 0; i < 80; i++) {
+        lbicgstab->initialize_const(lbicgstab->deltaT, 0.0, nx * ny);
+        resid[i] = lbicgstab->compute_r_j();
+        resid_file_bicgstab << "Iter = " << i << ", " << resid[i] << std::endl;
+        lbicgstab->solve(100); // Loops of BiCGStab
+        lbicgstab->update();
+    }
+    resid_file_bicgstab.close();
+    delete lbicgstab;
 
     delete [] resid;
 
