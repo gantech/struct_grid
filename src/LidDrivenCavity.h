@@ -3,8 +3,8 @@
 
 #include <string>
 #include "LinearSolver.h"
-#include "Jacobi.h"
-#include "ADI.h"
+#include "CG.h"
+#include "BiCGStab.h"
 #include <thrust/device_vector.h>
 
 namespace LidDrivenCavityNS {
@@ -30,11 +30,11 @@ public:
 
     __host__ double compute_cont_r_j();
 
-    __host__ void solve(int nsteps);
+    __host__ void solve_mom(int niters);
 
-    __host__ void solve_mom();
+    __host__ void solve_cont(int niters);
 
-    __host__ void solve_cont();
+    __host__ void set_ainv();
 
     int nx;
     int ny;
@@ -62,9 +62,9 @@ public:
     thrust::device_ptr<double> t_vnlr;
     thrust::device_ptr<double> t_cont_nlr;
 
-    LinearSolverNS::LinearSolver * solver_u;
-    LinearSolverNS::LinearSolver * solver_v;
-    LinearSolverNS::LinearSolver * solver_p;
+    std::unique_ptr<LinearSolverNS::LinearSolver> solver_u;
+    std::unique_ptr<LinearSolverNS::LinearSolver> solver_v;
+    std::unique_ptr<LinearSolverNS::LinearSolver> solver_p;
 
 private:
 

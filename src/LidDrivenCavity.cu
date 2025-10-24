@@ -110,6 +110,17 @@ __global__ void compute_gradp_kernel(double * p, double * gpx, double * gpy, int
     }
 }
 
+__global__ void set_ainv_kernel(double * a_inv, double * Jmom, int nx, int ny) {
+
+    int j = blockIdx.x * blockDim.x + threadIdx.x; // row index
+    int i = blockIdx.y * blockDim.y + threadIdx.y; // col index
+
+    if ((i < nx) && (j < ny)) {
+        int idx = (j + 1) * (nx + 2) + (i + 1);
+        int jidx = (j * nx + i) * 5;
+        a_inv[idx] = 1.0 / Jmom[jidx];
+    }
+}
 __device__ double face_flux_mom(double ul, double ur,
                                 double pl, double pr,
                                 double gpl, double gpr,
@@ -151,8 +162,8 @@ __global__ void compute_rmom_j(const __grid_constant__ CUtensorMap tensor_map_um
     double * gpxs = ps + 76 * 16;
     double * gpys = gpxs + 76 * 16;
     double * a_invs = gpys + 76 * 16;
-    // Continue to keep memory allocation for u_nlr, v_nlr and
-    // Jmom as (BM+2)*(BN+2). However, I will only compute
+    // Continue to keep memory allocation for u_nlr and v_nlr
+    // as (BM+2)*(BN+2). However, I will only compute
     // these for BM * BN cells.
     double * u_nlrs = a_invs + 76 * 16;
     double * v_nlrs = u_nlrs + 76 * 16;
@@ -335,9 +346,9 @@ __global__ void compute_rcont_j(const __grid_constant__ CUtensorMap tensor_map_u
     double * gpxs = ps + 76 * 16;
     double * gpys = gpxs + 76 * 16;
     double * a_invs = gpys + 76 * 16;
-    // Continue to keep memory allocation for cont_nlr and
-    // Jcont as (BM+2)*(BN+2). However, I will only compute
-    // these for BM * BN cells.
+    // Continue to keep memory allocation for cont_nlr 
+    // as (BM+2)*(BN+2). However, I will only compute
+    // this for BM * BN cells.
     double * cont_nlrs = a_invs + 76 * 16;
 
     // Initialize shared memory barrier with the number of threads participating in the barrier.
@@ -639,6 +650,49 @@ LidDrivenCavity::LidDrivenCavity(int nx_inp, int ny_inp, double nu_inp) {
     initialize_const<<<grid_size_1d, block_size_1d>>>(deltaV, 0.0, nx, ny);
     initialize_const<<<grid_size_1d, block_size_1d>>>(deltaP, 0.0, nx, ny);
 
+    solver_u = std::make_unique<BiCGStabNS::BiCGStab>(nx, ny, Jmom, deltaU, u_nlr);
+    solver_v = std::make_unique<BiCGStabNS::BiCGStab>(nx, ny, Jmom, deltaV, v_nlr);
+    solver_p = std::make_unique<CGNS::CG>(nx, ny, Jcont, deltaP, cont_nlr);
+
+
+    thrust::fill(thrust::device_pointer_cast(umom),
+              thrust::device_pointer_cast(umom + (nx + 2) * (ny + 2)),
+              0.0);
+    thrust::fill(thrust::device_pointer_cast(vmom),
+              thrust::device_pointer_cast(vmom + (nx + 2) * (ny + 2)),
+              0.0);
+    thrust::fill(thrust::device_pointer_cast(pres),
+              thrust::device_pointer_cast(pres + (nx + 2) * (ny + 2)),
+              0.0);
+    thrust::fill(thrust::device_pointer_cast(a_inv),
+              thrust::device_pointer_cast(a_inv + (nx + 2) * (ny + 2)),
+              1.0);
+    thrust::fill(thrust::device_pointer_cast(deltaU),
+              thrust::device_pointer_cast(deltaU + (nx + 2) * (ny + 2)),
+              0.0);
+    thrust::fill(thrust::device_pointer_cast(deltaV),
+              thrust::device_pointer_cast(deltaV + (nx + 2) * (ny + 2)),
+              0.0);
+    thrust::fill(thrust::device_pointer_cast(deltaP),
+              thrust::device_pointer_cast(deltaP + (nx + 2) * (ny + 2)),
+              0.0);
+    
+
+}
+
+
+LidDrivenCavityNS::set_ainv() {
+    set_ainv_kernel<<<grid_size, block_size>>>(a_inv, Jmom, nx, ny);
+    cudaDeviceSynchronize();
+}
+
+LidDrivenCavityNS::solve_mom(int niters) {
+    solver_u->solve(niters);
+    solver_v->solve(niters);
+}
+
+LidDrivenCavityNS::solve_cont(int niters) {
+    solver_p->solve(niters);
 }
 
 LidDrivenCavity::~LidDrivenCavity() {
@@ -666,8 +720,11 @@ int main() {
 
     LidDrivenCavityNS::LidDrivenCavity * lcav = new LidDrivenCavityNS::LidDrivenCavity(128, 384, 0.001);
 
-    for (int i = 0; i < 1e5; i++) {
+    lcav->apply_bc();
+    for (int i = 0; i < 1; i++) {
         lcav->compute_mom_r_j();
+        lcav->solve_mom(10);
+        lcav->set_ainv();
         lcav->compute_cont_r_j();
         lcav->apply_bc();
         lcav->compute_gradp();
